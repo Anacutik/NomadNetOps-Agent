@@ -1,0 +1,1417 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NomadNetOps Prototype</title>
+<style>
+  :root { --bg:#f6f7f9; --card:#fff; --ink:#1c2230; --mute:#667085; --line:#e3e6ec; --brand:#3b5bdb; --ok:#2b8a3e; --warn:#e67700; --bad:#c92a2a; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:15px/1.45 system-ui,Segoe UI,sans-serif; color:var(--ink); background:var(--bg); display:grid; grid-template-columns:340px 1fr; height:100vh; }
+  button { font:inherit; cursor:pointer; border-radius:8px; border:1px solid var(--line); background:#fff; padding:6px 12px; }
+  button:focus-visible, input:focus-visible, select:focus-visible { outline:3px solid var(--brand); outline-offset:2px; }
+  button.primary { background:var(--brand); color:#fff; border-color:var(--brand); }
+  aside { background:#fff; border-right:1px solid var(--line); display:flex; flex-direction:column; min-height:0; }
+  aside h2 { margin:0; padding:14px 16px; font-size:15px; border-bottom:1px solid var(--line); }
+  #log { flex:1; overflow:auto; padding:12px; display:flex; flex-direction:column; gap:10px; }
+  .msg { max-width:92%; padding:8px 12px; border-radius:12px; }
+  .ai { background:#eef1fb; align-self:flex-start; }
+  .me { background:var(--brand); color:#fff; align-self:flex-end; }
+  .chips { display:flex; gap:6px; flex-wrap:wrap; margin-top:6px; }
+  form { display:flex; gap:6px; padding:10px; border-top:1px solid var(--line); }
+  form input { flex:1; padding:8px 10px; border:1px solid var(--line); border-radius:8px; font:inherit; }
+  main { overflow:auto; padding:20px 24px; }
+  nav { display:flex; gap:6px; margin-bottom:16px; flex-wrap:wrap; }
+  nav button[aria-selected=true] { background:var(--ink); color:#fff; }
+  .flow { display:flex; align-items:stretch; gap:8px; flex-wrap:wrap; }
+  .block { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px 14px; width:170px; }
+  .block b { display:block; font-size:12px; color:var(--mute); text-transform:uppercase; letter-spacing:.04em; }
+  .arrow { align-self:center; color:var(--mute); font-size:20px; }
+  .block.new { animation:pop .5s; border-color:var(--brand); }
+  @keyframes pop { from { transform:scale(.9); opacity:0; } }
+  .panel { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; margin-top:16px; }
+  .panel h3 { margin:0 0 10px; font-size:15px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:14px; }
+  label { display:block; font-size:13px; color:var(--mute); margin-bottom:4px; }
+  .seg button[aria-pressed=true] { background:var(--brand); color:#fff; border-color:var(--brand); }
+  .tag { font-size:11px; padding:2px 7px; border-radius:99px; border:1px solid var(--line); }
+  .fact { background:#e6f4ea; color:var(--ok); }
+  .expl { background:#fff4e0; color:var(--warn); }
+  .verdict { border-left:5px solid var(--bad); padding-left:10px; }
+  table { width:100%; border-collapse:collapse; } td,th { text-align:left; padding:6px 8px; border-bottom:1px solid var(--line); }
+  .inp { padding:7px 9px; border:1px solid var(--line); border-radius:8px; font:inherit; width:100%; background:#fff; }
+  nav.sub { margin-bottom:0; } nav.sub button[aria-selected=true] { background:var(--brand); border-color:var(--brand); }
+  .preview { background:#eef1fb; border-radius:10px; padding:10px 12px; }
+  .inl { display:flex; gap:8px; align-items:center; color:var(--ink); font-size:14px; }
+  .savebtn { margin-top:16px; }
+  .tablewrap { max-height:460px; overflow:auto; border:1px solid var(--line); border-radius:10px; }
+  .tablewrap th { position:sticky; top:0; background:#fff; }
+  #libtable tbody tr { cursor:pointer; } #libtable tbody tr:hover, #libtable tbody tr.sel { background:#eef1fb; }
+  .star { border:0; background:none; font-size:18px; padding:0 6px; color:#adb5bd; } .star[aria-pressed=true] { color:#f59f00; }
+  .sr { position:absolute; left:-9999px; }
+  .mini { font-size:11px; padding:1px 6px; border-radius:99px; background:#eef1fb; margin-right:4px; display:inline-block; }
+  .lim { display:flex; gap:6px; margin-bottom:6px; } .lim .inp { width:auto; }
+  .dgrid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:8px 20px; } .dgrid div small { color:var(--mute); display:block; }
+  .note { background:#eef1fb; border-radius:10px; padding:8px 12px; margin:8px 0; font-size:14px; }
+  .note.warn { background:#fff4e0; border-left:4px solid var(--warn); }
+  .m small { color:var(--mute); font-weight:normal; }
+  .mini.warn { background:#fff4e0; color:var(--warn); }
+  .typebox { border:1px solid var(--line); border-radius:10px; margin:0 0 14px; padding:10px 14px; } .typebox legend { font-weight:600; padding:0 6px; }
+  .subs { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:4px 16px; margin:10px 0; }
+  .subs label { display:flex; gap:8px; align-items:flex-start; color:var(--ink); font-size:14px; margin:0; }
+  .tcat { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:4px 16px; margin-top:12px; }
+  .tcat summary { cursor:pointer; font-weight:600; padding:10px 0; }
+  .tsub { display:block; width:100%; text-align:left; margin:0 0 6px; }
+  .rep dt { font-weight:600; margin-top:8px; } .rep dd { margin:2px 0 0; }
+  [hidden] { display:none !important; }
+  .sidenav { display:flex; flex-direction:column; gap:4px; }
+  .qa { background:var(--tint); border-radius:10px; padding:10px 12px; margin:8px 0; } .qa .q { font-weight:600; }
+  .idea { border:1px solid var(--line); border-radius:10px; padding:8px 10px; margin-bottom:8px; } .idea p { margin:0 0 6px; }
+  pre.prompt { white-space:pre-wrap; background:#14112b; color:#ece8ff; border-radius:10px; padding:12px; font:13px/1.5 Consolas,monospace; max-height:420px; overflow:auto; }
+  #dprev svg { max-width:100%; height:auto; }
+  /* Layout: sidebar | main | Master AI panel */
+  :root { --brand:#6d4aff; --tint:#f1edff; --r:14px; }
+  body { grid-template-columns:224px minmax(0,1fr) 340px; }
+  body.nomaster { grid-template-columns:224px minmax(0,1fr); }
+  body.nomaster #masterpanel { display:none; }
+  #masterpanel { border-right:0; border-left:1px solid var(--line); }
+  .ai, .mini, .preview, .note, #libtable tbody tr:hover, #libtable tbody tr.sel { background:var(--tint); }
+  .panel, .block, .tcat { border-radius:var(--r); box-shadow:0 1px 2px rgba(20,16,50,.04); }
+  .side { background:#fff; border-right:1px solid var(--line); display:flex; flex-direction:column; padding:16px 12px; gap:4px; min-height:0; overflow:auto; }
+  .logo { font-weight:700; font-size:18px; color:var(--brand); padding:4px 10px 14px; }
+  .side .nv { text-align:left; border:0; background:none; padding:9px 12px; border-radius:10px; color:var(--ink); display:flex; justify-content:space-between; align-items:center; }
+  .side .nv:hover { background:var(--tint); }
+  .side .nv[aria-current=page] { background:var(--brand); color:#fff; }
+  .side .plan { margin-top:auto; border:1px solid var(--line); border-radius:var(--r); padding:12px; font-size:13px; }
+  .bar { height:7px; background:#e9e5fb; border-radius:9px; overflow:hidden; margin:6px 0; } .bar i { display:block; height:100%; background:var(--brand); }
+  .topbar { display:flex; align-items:center; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
+  .topbar h1 { margin:0; font-size:22px; flex:1; min-width:180px; }
+  button.primary:hover { filter:brightness(1.08); }
+  button.ok { background:#2b8a3e; color:#fff; border-color:#2b8a3e; } button.danger { color:var(--bad); border-color:var(--bad); }
+  .badge { font-size:12px; padding:2px 9px; border-radius:99px; background:#e9e5fb; color:#4b2fd1; white-space:nowrap; }
+  .badge.done { background:#e6f4ea; color:var(--ok); } .badge.prog { background:#e7f0ff; color:#1c5bd9; } .badge.pend { background:#fff4e0; color:var(--warn); }
+  /* Overview widgets (optional and adjustable) */
+  .widgets { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; }
+  .w { background:#fff; border:1px solid var(--line); border-radius:var(--r); padding:14px 16px; min-width:0; }
+  .w h3 { margin:0 0 8px; font-size:15px; display:flex; justify-content:space-between; align-items:center; }
+  .w.s1 { grid-column:span 1; } .w.s2 { grid-column:span 2; } .w.s3 { grid-column:span 3; }
+  .w ul { list-style:none; margin:0; padding:0; } .w li { display:flex; gap:8px; align-items:center; padding:6px 0; border-bottom:1px solid var(--line); font-size:14px; cursor:pointer; }
+  .w li:last-child { border:0; } .w li span.t { color:var(--mute); font-size:12px; min-width:48px; } .w li .badge { margin-left:auto; }
+  .dot { width:10px; height:10px; border-radius:50%; flex:none; }
+  .c-r { background:#7c5cff; } .c-w { background:#2bb5a0; } .c-s { background:#f2a33a; } .c-d { background:#4a8df6; }
+  .quick { display:flex; gap:8px; border:0; padding:0; } .quick input { flex:1; }
+  .agents { display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:14px; }
+  .agent { background:#fff; border:1px solid var(--line); border-radius:var(--r); padding:16px; }
+  .agent h3 { margin:0 0 4px; display:flex; gap:8px; align-items:center; } .agent p { color:var(--mute); margin:4px 0 10px; font-size:14px; }
+  .cust { background:#fff; border:1px dashed var(--brand); border-radius:var(--r); padding:12px 16px; margin-bottom:14px; }
+  .cust .row { display:flex; gap:10px; align-items:center; padding:4px 0; flex-wrap:wrap; } .cust .row label { margin:0; color:var(--ink); display:flex; gap:6px; align-items:center; min-width:190px; }
+  /* Task builder as numbered steps */
+  .flow { counter-reset:st; gap:10px; } .flow .arrow { display:none; }
+  .block { counter-increment:st; width:158px; position:relative; padding-top:30px; }
+  .block.s2 { width:326px; } .block.drag { opacity:.4; }
+  .block span[contenteditable=true] { display:block; outline:none; border-radius:6px; padding:1px 3px; margin:-1px -3px; } .block span[contenteditable=true]:hover { background:var(--tint); }
+  .grip { position:absolute; top:5px; right:6px; border:0; background:none; padding:0 6px; color:var(--mute); cursor:grab; font-size:16px; }
+  .drop { border:2px dashed #b9a9ff; background:var(--tint); border-radius:var(--r); padding:34px 16px; text-align:center; cursor:pointer; margin:12px 0; }
+  .drop.over, .drop:focus-visible { background:#e3dbff; border-color:var(--brand); }
+  .drop b { display:block; font-size:16px; }
+  .rescard { background:#fff; border:1px solid var(--line); border-left:5px solid var(--brand); border-radius:var(--r); padding:14px 16px; margin-top:12px; }
+  .rescard h3 { margin:0 0 6px; display:flex; gap:8px; align-items:center; flex-wrap:wrap; } .rescard.done { opacity:.7; border-left-color:var(--ok); }
+  .rescard dl { margin:6px 0; display:grid; grid-template-columns:150px 1fr; gap:4px 12px; } .rescard dt { color:var(--mute); font-size:13px; } .rescard dd { margin:0; }
+  .rescard .acts { margin-top:8px; display:flex; gap:8px; flex-wrap:wrap; } .rescard q { color:var(--mute); }
+  .block::before { content:counter(st); position:absolute; top:8px; left:12px; width:20px; height:20px; border-radius:50%; background:var(--brand); color:#fff; font-size:12px; display:grid; place-items:center; }
+  /* Calendar */
+  .cal { display:grid; grid-template-columns:54px repeat(7,minmax(0,1fr)); gap:0; background:#fff; border:1px solid var(--line); border-radius:var(--r); overflow:hidden; }
+  .cal .h { padding:8px; text-align:center; font-weight:600; border-bottom:1px solid var(--line); font-size:13px; }
+  .cal .hr { padding:4px 6px; color:var(--mute); font-size:12px; border-top:1px solid var(--line); height:58px; }
+  .cal .cell { border-top:1px solid var(--line); border-left:1px solid var(--line); height:58px; padding:2px; }
+  .ev { display:block; width:100%; text-align:left; font-size:11px; line-height:1.25; padding:4px 6px; border-radius:7px; border:0; height:100%; overflow:hidden; }
+  .ev.r { background:#e8e1ff; color:#3d22b3; } .ev.w { background:#d8f3ee; color:#14705f; } .ev.s { background:#fdebd0; color:#9a5a05; } .ev.d { background:#dbe8ff; color:#1c4fb5; }
+  .legend { display:flex; gap:14px; margin-top:10px; font-size:13px; color:var(--mute); } .legend span { display:flex; gap:6px; align-items:center; }
+  .tl { list-style:none; padding:0; margin:0; } .tl li { padding:0 0 12px 18px; border-left:2px solid #d9d2fb; position:relative; font-size:14px; } .tl li::before { content:""; position:absolute; left:-6px; top:3px; width:10px; height:10px; border-radius:50%; background:var(--brand); }
+  /* Master AI panel */
+  #masterpanel .head { display:flex; align-items:center; gap:8px; padding:14px 16px; border-bottom:1px solid var(--line); } #masterpanel .head b { flex:1; }
+  #sugg { padding:10px 12px; border-top:1px solid var(--line); display:flex; flex-direction:column; gap:6px; } #sugg button { text-align:left; background:var(--tint); border-color:#ddd5ff; color:#4b2fd1; }
+  @media (max-width:1100px) { body { grid-template-columns:200px minmax(0,1fr); } #masterpanel { display:none; } body.showmaster #masterpanel { display:flex; position:fixed; right:0; top:0; bottom:0; width:340px; z-index:5; box-shadow:-8px 0 24px rgba(0,0,0,.15); } .widgets { grid-template-columns:1fr; } .w.s1,.w.s2,.w.s3 { grid-column:auto; } }
+  @media (max-width:800px) { body { grid-template-columns:1fr; height:auto; min-height:100vh; } .side { flex-direction:row; flex-wrap:wrap; align-items:center; padding:8px; } .logo { padding:0 10px; } .side .plan { display:none; } .block { width:100%; } .cal { overflow-x:auto; min-width:640px; } }
+</style>
+</head>
+<body>
+<div class="side" role="navigation" aria-label="Main">
+  <div class="logo">NomadNetOps</div>
+  <div id="sidenav" class="sidenav"></div>
+  <div class="plan"><b>Free plan</b><div class="bar"><i style="width:42%"></i></div>42 / 100 runs used<br><small style="color:var(--mute)">Spent this month: <span class="m" data-usd="1.40"></span></small></div>
+</div>
+
+<main>
+  <section id="overview">
+    <div class="topbar"><h1>Good morning!</h1>
+      <button id="custbtn" aria-expanded="false" aria-controls="cust">Customize this page</button>
+      <button id="showmaster" hidden>Show Master AI</button>
+      <button class="primary" data-v="canvas">+ Create a task</button></div>
+    <div class="cust" id="cust" hidden>
+      <b>Make this page yours.</b> <small style="color:var(--mute)">Everything here is optional. Your choices are remembered on this device.</small>
+      <div id="custrows"></div>
+      <div class="row"><label><input type="checkbox" id="optmaster" checked> Show the Master AI panel</label>
+        <label><input type="checkbox" id="optmsg" checked> Show its message box</label>
+        <button id="custreset">Reset to default</button></div>
+    </div>
+    <div class="widgets" id="widgets"></div>
+  </section>
+
+  <section id="secretary" hidden>
+    <div class="topbar"><h1>Secretary</h1>
+      <label class="inl" style="margin:0">Remind me <select id="remdays" class="inp" style="width:auto"><option value="1">1 day</option><option value="3" selected>3 days</option><option value="7">7 days</option></select> before a bill is due</label></div>
+    <p style="color:var(--mute);margin-top:0">Drop bills, letters, emails and appointment cards here. I put appointments on your agenda, calculate and remind you about bills, and explain official letters and rule changes in plain words. Nothing is booked, sent or paid without your confirmation, and I never follow instructions written inside a document.</p>
+    <div class="drop" id="drop" tabindex="0" role="button" aria-label="Drop files here, or press Enter to choose files"><b>Drag and drop files here</b>or click to choose. Text, email (.eml, .txt) and PDF or photo files.<input type="file" id="filein" multiple hidden></div>
+    <details class="panel" style="margin-top:0"><summary>No files at hand? Paste text or try an example</summary>
+      <p><textarea id="pastein" class="inp" rows="4" aria-label="Paste the text of an email or letter" placeholder="Paste an email or letter here"></textarea></p>
+      <p><button class="primary" id="pastego">Analyse this text</button>
+      <button data-ex="bill">Example: electricity bill</button> <button data-ex="appt">Example: dentist appointment</button> <button data-ex="gov">Example: tax authority letter</button></p></details>
+    <div id="secres" aria-live="polite"></div>
+    <div class="grid" style="margin-top:16px">
+      <div class="panel" style="margin:0"><h3>Bills <span class="tag" id="billsum"></span></h3><table id="billtab"><tr><th>From</th><th>Amount</th><th>Due</th><th>Reminder</th><th></th></tr></table><small id="billnone" style="color:var(--mute)">No bills yet.</small></div>
+      <div class="panel" style="margin:0"><h3>Secretary log <span class="tag fact">Recorded fact</span></h3><ul class="tl" id="seclog"></ul><small id="lognone" style="color:var(--mute)">Nothing logged yet.</small></div>
+    </div>
+  </section>
+
+  <section id="finances" hidden>
+    <div class="topbar"><h1>Finances</h1><span class="badge">Your money overview</span>
+      <label class="inl" style="margin:0">Period <select id="fzper" class="inp" style="width:auto"><option value="0">This month</option><option value="1">Last month</option><option value="all">All time</option></select></label></div>
+    <p style="color:var(--mute);margin-top:0">Bills from the Secretary, your own entries and imported bank statements come together here. This is separate from what your AI tasks cost. Nomad only reads and counts: it never moves money, and you always pay yourself. In this prototype data stays in this browser; the real app stores it encrypted.</p>
+    <div class="grid" id="fzkpi" style="margin-bottom:16px"></div>
+    <div class="grid" style="align-items:start">
+      <div class="panel" style="margin:0"><h3>Add an entry</h3>
+        <label for="fzdesc">What was it</label><input id="fzdesc" class="inp" placeholder="e.g. Groceries">
+        <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+          <div style="flex:1;min-width:90px"><label for="fzamt">Amount</label><input id="fzamt" class="inp" inputmode="decimal" placeholder="12.50"></div>
+          <div style="flex:1;min-width:130px"><label for="fzdate">Date</label><input id="fzdate" class="inp" type="date"></div>
+          <div style="flex:1;min-width:100px"><label for="fzkind">Type</label><select id="fzkind" class="inp"><option value="out">Spent</option><option value="in">Received</option></select></div></div>
+        <p style="margin-bottom:0"><button class="primary" id="fzadd">Add entry</button> <small id="fzmsg" role="status" style="color:var(--mute)"></small></p>
+        <details style="margin-top:12px"><summary>Import a bank statement (CSV)</summary>
+          <p style="margin:6px 0"><small style="color:var(--mute)">Lines like <code>2026-10-28;Supermarket;-23,40</code> (date, description, amount; negative means spent). Choose a file or paste.</small></p>
+          <input type="file" id="fzfile" accept=".csv,.txt" aria-label="Choose a CSV file"><textarea id="fzcsv" class="inp" rows="3" aria-label="Paste statement lines" placeholder="Paste statement lines"></textarea>
+          <p style="margin-bottom:0"><button id="fzprev">Preview import</button> <button id="fzsample">Try an example</button></p><div id="fzpreview" aria-live="polite"></div></details></div>
+      <div class="panel" style="margin:0"><h3>Bills to pay <span class="tag" id="fzbsum"></span></h3><div id="fzbills"></div><small id="fzbnone" style="color:var(--mute)">No open bills. Bills you confirm in the Secretary show up here.</small>
+        <h3 style="margin-top:16px">Where it goes</h3><div id="fzcats"></div><small id="fzcnone" style="color:var(--mute)">No spending in this period.</small></div>
+    </div>
+    <div class="panel"><h3>Entries <span class="tag" id="fzcount"></span></h3><table id="fztab"><tr><th>Date</th><th>What</th><th>Category</th><th>Amount</th><th></th></tr></table><small id="fznone" style="color:var(--mute)">No entries in this period.</small></div>
+  </section>
+
+  <section id="notes" hidden>
+    <div class="topbar"><h1>Ideas</h1><span class="badge">Jot it down, I work it out</span></div>
+    <p style="color:var(--mute);margin-top:0">Write any thought in a few words, on your phone or here. I sort it, ask what I need to know, and then either compare options (best quality, best budget, best do-it-yourself, best middle), make a reminder task, or hand it to the Coder helper. Nothing is bought, ordered or sent without your approval.</p>
+    <div class="panel" style="margin-top:0"><label for="ntin">New idea</label>
+      <form id="ntform" style="display:flex;gap:6px"><input id="ntin" class="inp" placeholder="e.g. camper ventilation roof"><button class="primary">Save and sort</button></form></div>
+    <div class="grid" style="margin-top:16px;align-items:start">
+      <div class="panel" style="margin:0"><h3>Your ideas <span class="tag" id="ntcount"></span></h3><div id="ntlist"></div><small id="ntnone" style="color:var(--mute)">No ideas yet. Try "camper ventilation roof", "improve 12v circuit" or "add screenwash to van".</small></div>
+      <div class="panel" style="margin:0" id="ntwork" aria-live="polite"><h3>Work area</h3><small style="color:var(--mute)">Pick an idea to see what I made of it.</small></div>
+    </div>
+  </section>
+
+  <section id="coder" hidden>
+    <div class="topbar"><h1>Coder helper</h1><span class="badge">Optional module</span>
+      <label class="inl" style="margin:0">Write prompts for <select id="ctarget" class="inp" style="width:auto"><option>Kilo Code in VS Code</option><option>GitHub Copilot Chat</option><option>Any coding AI</option></select></label></div>
+    <p style="color:var(--mute);margin-top:0">Jot an idea in your own words, on your phone or here. I analyse it, ask a few design questions, and write a ready-to-paste prompt so your coding AI builds the right thing the first time. I never change your code myself.</p>
+    <div class="panel" style="margin-top:0"><label for="idea">New idea</label>
+      <textarea id="idea" class="inp" rows="3" placeholder="e.g. A website where neighbours can lend each other tools, with a simple map"></textarea>
+      <p style="margin-bottom:0"><button id="ideasave">Save for later</button> <button class="primary" id="ideago">Save and analyse</button></p></div>
+    <div class="grid" style="margin-top:16px;align-items:start">
+      <div class="panel" style="margin:0"><h3>Your ideas <span class="tag" id="ideacount"></span></h3><div id="ideas"></div><small id="ideanone" style="color:var(--mute)">No ideas yet. Write one above.</small></div>
+      <div class="panel" style="margin:0" id="cwork" aria-live="polite"><h3>Work area</h3><small style="color:var(--mute)">Pick an idea and press Analyse. I ask one question at a time, you can always say "you decide".</small></div>
+    </div>
+  </section>
+
+  <section id="designer" hidden>
+    <div class="topbar"><h1>Designer</h1><span class="badge">Brand baseline</span>
+      <button id="dsave" class="primary">Save as baseline</button><button id="ddl">Download this image (SVG)</button></div>
+    <p style="color:var(--mute);margin-top:0">Design a visual identity, a website or app layout, a social set or a site map. Save it as your baseline and other agents (Writer, Secretary, Coder helper) keep every result consistent with it.</p>
+    <div class="grid" style="align-items:start;grid-template-columns:minmax(260px,340px) minmax(0,1fr)">
+      <div class="panel" style="margin:0"><h3>Identity</h3>
+        <label for="bname">Name</label><input id="bname" class="inp" value="Green Corner">
+        <label for="btag" style="margin-top:8px">Tagline</label><input id="btag" class="inp" value="Fresh and local, every day">
+        <label for="bmood" style="margin-top:8px">Mood</label>
+        <div style="display:flex;gap:6px"><select id="bmood" class="inp"><option>Calm</option><option>Bold</option><option>Playful</option><option>Trustworthy</option><option>Premium</option></select><button id="bsuggest">Suggest</button></div>
+        <div class="dgrid" style="margin-top:8px;grid-template-columns:repeat(2,1fr)">
+          <div><label for="c1">Main colour</label><input id="c1" type="color" value="#2f7d4f"></div><div><label for="c2">Second colour</label><input id="c2" type="color" value="#f2c94c"></div>
+          <div><label for="c3">Accent</label><input id="c3" type="color" value="#e4572e"></div><div><label for="c4">Background</label><input id="c4" type="color" value="#f7f5ef"></div></div>
+        <label for="bfont" style="margin-top:8px">Headline font</label>
+        <select id="bfont" class="inp"><option value="Georgia, serif">Classic serif</option><option value="'Segoe UI', system-ui, sans-serif">Clean sans</option><option value="'Trebuchet MS', sans-serif">Friendly</option><option value="'Courier New', monospace">Technical</option></select>
+        <label for="bareas" style="margin-top:8px">Site map areas (comma separated)</label><input id="bareas" class="inp" value="Entrance, Market hall, Garden, Parking, Cafe">
+        <p id="bstatus" class="note" role="status" style="margin-bottom:0">Not saved yet. Other agents have no baseline to follow.</p></div>
+      <div><span class="seg" role="group" aria-label="Preview" id="dtabs"><button aria-pressed="true" data-p="id">Identity</button><button aria-pressed="false" data-p="social">Social</button><button aria-pressed="false" data-p="web">Website</button><button aria-pressed="false" data-p="app">App</button><button aria-pressed="false" data-p="map">Site map</button></span>
+        <div class="panel" id="dprev" style="text-align:center" aria-live="polite"></div>
+        <small style="color:var(--mute)">These are design sketches for direction. A full image generator can be connected later as a tool (vetted like every tool).</small></div>
+    </div>
+  </section>
+
+  <section id="agents" hidden>
+    <div class="topbar"><h1>Agents</h1><small style="color:var(--mute)">Pick the right helper for your task.</small></div>
+    <div class="agents" id="agentlist"></div>
+  </section>
+
+  <section id="taskdetail" hidden>
+    <div class="topbar"><button data-v="overview">&larr; Back</button><h1>Market research summary <span class="badge pend">Pending approval</span></h1>
+      <button class="ok" id="dapprove">Approve</button><button>Edit</button><button class="danger">Cancel</button></div>
+    <div class="grid">
+      <div class="panel" style="margin:0"><h3>Task summary</h3><p>Research the latest AI industry trends, key funding announcements and major product launches from the past week, and summarize the key takeaways.</p>
+        <p><small>Assigned agent: <b>Researcher</b> &middot; Planned for May 12, 2026 &middot; Cost estimate <span class="m" data-usd="0.40"></span></small></p>
+        <p><span class="tag fact">Recorded fact</span> 14 sources read, 3 skipped (paywall). <a href="#" data-go="why">Why this choice?</a></p></div>
+      <div class="panel" style="margin:0"><h3>Connected tools</h3><p><span class="mini">Web search</span><span class="mini">Notion</span><span class="mini">Google Drive</span><span class="mini">Slack</span></p>
+        <h3>Run history</h3><ul class="tl"><li>Task started</li><li>Gathering data</li><li>Draft generated</li><li><b>Awaiting your approval</b></li></ul></div>
+    </div>
+    <div class="panel"><h3>Latest output preview</h3><p>This week's AI sector saw major funding rounds in generative media, new enterprise tool launches, and increased momentum in regulation discussions.</p><button>View full output</button></div>
+  </section>
+
+  <section id="canvas" hidden>
+    <div class="topbar"><h1 id="title">Build a new task</h1><button id="badjust" aria-expanded="false" aria-controls="bcust">Adjust boxes</button><button id="testrun">Test run</button><button class="primary" id="savetask">Save task</button></div>
+    <div class="cust" id="bcust" hidden><b>Arrange your task builder.</b> <small style="color:var(--mute)">Show or hide boxes, make them wide, reorder them, or drag a box by its grip. Click the text in a box to edit it. You can also ask the Master AI, e.g. "add a budget box".</small>
+      <div id="brows"></div><div class="row"><button id="breset">Reset boxes</button></div></div>
+    <p id="sub" style="margin:0 0 16px;color:var(--mute)">Describe a goal in the Master AI panel and the steps appear here.</p>
+    <div class="flow" id="flow" aria-label="Plan"></div>
+
+    <div class="panel" id="settings" hidden>
+      <h3>Settings: please confirm</h3>
+      <fieldset class="typebox"><legend>What kind of task is this?</legend>
+        <div class="grid"><div><label for="cat">Category</label><select id="cat" class="inp"></select></div></div>
+        <div id="subs" class="subs" role="group" aria-label="Task types in this category"></div>
+        <div id="catnote" class="note" role="status"></div>
+        <div id="catmodel" class="note"></div>
+      </fieldset>
+      <div class="grid">
+        <div><label>Model quality</label>
+          <div class="seg" id="model" role="group"><button aria-pressed="false">Fast</button><button aria-pressed="true">Balanced</button><button aria-pressed="false">Best</button></div></div>
+        <div><label for="reason">Thinking depth: <span id="rv">Medium</span></label>
+          <input id="reason" type="range" min="0" max="2" value="1" aria-valuetext="Medium"></div>
+        <div><label for="spend">Max spend per month: <b class="m" id="sv" data-usd="5"></b></label>
+          <input id="spend" type="range" min="1" max="50" value="5"><small id="est" style="color:var(--mute)">Estimated: about <span class="m" data-usd="1.30"></span> per run</small></div>
+        <div><label>Schedule</label><div>Monthly, 1st at 09:00 <button>Edit</button></div></div>
+      </div>
+      <p class="inl" style="margin:12px 0 0"><label class="inl" for="imp"><input type="checkbox" id="imp"> <b>This is an important task</b></label></p>
+      <small style="color:var(--mute)" id="impnote">Not important: if a spending limit is reached, the task stops and you are notified.</small>
+      <small id="impsug" style="display:block"></small>
+      <p><label for="dir">Directions (your words)</label>
+        <input id="dir" style="width:100%;padding:8px;border:1px solid var(--line);border-radius:8px" value="Check government websites for rule changes that affect my business and summarise them with links."></p>
+      <details><summary>See how the AI will interpret this</summary><small>You are a careful regulatory analyst. Only use the listed official sources. Cite every claim with a link. Flag items affecting a small business in the Netherlands. If unsure, say so.</small></details>
+      <p><button class="primary" id="dry">Test with last month's data</button> <span id="dr"></span></p>
+    </div>
+  </section>
+
+  <section id="agenda" hidden>
+    <div class="topbar"><h1>Agenda</h1>
+      <span class="seg" role="group" aria-label="Agenda view"><button aria-pressed="true" data-av="week">Week</button><button aria-pressed="false" data-av="list">List</button></span></div>
+    <div id="calwrap"><div class="cal" id="cal" role="grid" aria-label="Week of May 12"></div>
+      <div class="legend"><span><i class="dot c-r"></i>Researcher</span><span><i class="dot c-w"></i>Writer</span><span><i class="dot c-s"></i>Scheduler</span><span><i class="dot c-d"></i>Data Assistant</span></div></div>
+    <table id="agtable" hidden><tr><th>When</th><th>Assistant</th><th>Task</th><th>Type</th><th>Cost</th></tr>
+      <tr><td>1 Dec 09:00</td><td>Rule Watcher</td><td>Check government sites</td><td><span class="tag">Research</span> Track policy changes</td><td><span class="m" data-usd="1.30"></span></td></tr>
+      <tr><td>Fridays 16:00</td><td>Invoice Helper</td><td>Chase unpaid invoices (needs approval)</td><td><span class="tag">Business</span> Process invoices</td><td><span class="m" data-usd="0.33"></span></td></tr></table>
+  </section>
+
+  <section id="types" hidden>
+    <h1 style="margin-top:0">Task types</h1>
+    <p style="color:var(--mute)">Pick what you want done. Nomad files it under a type, suggests suitable models and safety rules, and asks you for approval before anything with real consequences.</p>
+    <p class="note"><b>Always asks you first:</b> sending messages, publishing content, spending money, changing account settings, deleting data, and anything about health or legal decisions.</p>
+    <div id="typelist"></div>
+  </section>
+
+  <section id="inbox" hidden>
+    <h1 style="margin-top:0">Inbox</h1>
+    <div class="panel"><h3>Rule Watcher: November report</h3>
+      <p>2 changes may affect you. <a href="#" data-go="why">Why these two?</a></p>
+      <p><button class="primary">Approve</button> <button>Ask to fix</button> <button>Reject</button></p></div>
+    <div class="panel"><h3>Needs approval: send email to accountant <span class="tag expl">Risk: outside contact</span></h3>
+      <p>"Hi, attached is the summary of VAT changes..."</p><p><button class="primary">Send</button> <button>Edit</button> <button>Don't send</button></p></div>
+    <div class="panel" id="paused"><h3>Paused: Invoice Helper reached its limit <span class="tag expl">Waiting for you</span></h3>
+      <p>The monthly limit of <span class="m" data-usd="2"></span> is used up (<span class="m" data-usd="2"></span> spent). 4 reminders are still to be sent. Nothing more is spent while it waits.</p>
+      <p>Time left to answer: <b id="pleft"></b>. Notified by <span id="pvia"></span>.</p>
+      <p><button class="primary">Allow <span class="m" data-usd="1"></span> extra</button> <button>Choose another amount</button> <button>Stop the task</button>
+      <button id="simabort" title="Prototype only">Simulate: no reply</button></p></div>
+    <div id="abortlist"></div>
+  </section>
+
+  <section id="why" hidden>
+    <h1 style="margin-top:0">Why did it say that?</h1>
+    <div class="panel">
+      <p><span class="tag fact">Recorded fact</span> Opened belastingdienst.nl/btw-2026 at 09:00:12. Page changed since last month.</p>
+      <p><span class="tag fact">Recorded fact</span> Read 3 PDFs, 41 pages. Cost <span class="m" data-usd="1.02"></span>. Model: Balanced.</p>
+      <p><span class="tag expl">AI explanation</span> "The new small-business VAT threshold applies because your profile says turnover is under &euro;20,000." <a href="#">Source, page 4</a></p>
+      <p><span class="tag expl">AI explanation</span> Considered but ignored: 6 changes about excise duty (not relevant to your profile).</p>
+      <details><summary>Show every step (advanced)</summary><small>12 steps: fetch, fetch, extract, compare, summarise, check links, ...</small></details>
+      <small style="color:var(--mute)">AI explanations are the model's own account and may be imperfect. Check the source.</small>
+    </div>
+  </section>
+
+  <section id="tools" hidden>
+    <h1 style="margin-top:0">Tools</h1>
+    <div class="panel verdict"><h3>PDF Magic Reader v2.1 <span class="tag" style="color:var(--bad)">Don't install</span></h3>
+      <p>Wants access to all your files and sends data to an unknown server (ads-track.example). Not needed for reading PDFs.</p>
+      <p><button class="primary">Keep it out</button> <button>Install anyway... (extra confirmation)</button></p></div>
+    <div class="panel"><h3>Web Fetch update 1.4 &rarr; 1.5 <span class="tag fact">Install</span></h3>
+      <p>Same permissions and destinations. Fixes a security bug. <button class="primary">Update</button></p></div>
+  </section>
+
+  <section id="settings-view" hidden>
+    <h1 style="margin-top:0">Settings</h1>
+    <nav class="sub" role="tablist" aria-label="Settings sections">
+      <button role="tab" aria-selected="true" data-s="s-master">Master AI</button>
+      <button role="tab" aria-selected="false" data-s="s-models">Models &amp; keys</button>
+      <button role="tab" aria-selected="false" data-s="s-library">Model library <span id="favcount" class="tag"></span></button>
+      <button role="tab" aria-selected="false" data-s="s-tasks">Assistants &amp; tasks</button>
+      <button role="tab" aria-selected="false" data-s="s-side">Menu &amp; modules</button>
+    </nav>
+
+    <div id="s-side" class="spane" hidden>
+      <div class="panel"><h3>Menu &amp; modules</h3>
+        <p style="margin-top:0;color:var(--mute)">Show only what you use. Modules like the Coder helper are off until you switch them on, so the app stays calm for people who do not need them. You can also ask the Master AI: "hide the secretary".</p>
+        <div id="siderows"></div>
+        <p><button id="sidereset">Reset menu</button></p></div>
+    </div>
+
+    <div id="s-master" class="spane">
+      <div class="panel"><h3>Character</h3>
+        <div class="grid">
+          <div><label for="mname">Name</label><input id="mname" class="inp" value="Nomad"></div>
+          <div><label>Tone</label><div class="seg tone" role="group"><button aria-pressed="true">Friendly</button><button aria-pressed="false">Professional</button><button aria-pressed="false">Short &amp; direct</button></div></div>
+          <div><label for="detail">Level of detail: <span id="dv">Balanced</span></label><input id="detail" type="range" min="0" max="2" value="1"></div>
+          <div><label for="proact">How proactive</label>
+            <select id="proact" class="inp"><option>Only answers when I ask</option><option selected>Suggests improvements</option><option>Proactively warns and proposes changes</option></select></div>
+          <div><label for="lang">Language</label><select id="lang" class="inp"><option>Same as I write</option><option>English</option><option>Nederlands</option><option>Deutsch</option><option>Français</option><option>Español</option></select></div>
+          <div><label for="expl">Explain things for</label><select id="expl" class="inp"><option selected>Beginners (no jargon)</option><option>Experienced users</option></select></div>
+        </div>
+        <p><label for="note">Extra instructions about how Nomad should behave (optional)</label><input id="note" class="inp" style="width:100%" placeholder="e.g. Always mention costs before starting something."></p>
+        <p class="preview" aria-live="polite"><small style="color:var(--mute)">Preview</small><br><span id="prev"></span></p>
+      </div>
+      <div class="panel"><h3>Brain of the Master AI</h3>
+        <div class="grid">
+          <div><label for="mmodel">Model</label><select id="mmodel" class="inp modelsel"><option>Balanced (recommended)</option><option>Fast</option><option>Best</option><option>Choose exact model...</option></select></div>
+          <div><label for="mreason">Thinking depth: <span id="mrv">Medium</span></label><input id="mreason" type="range" min="0" max="2" value="1"></div>
+          <div><label for="mspend">Max spend per month: <b class="m" id="msv" data-usd="10"></b></label><input id="mspend" type="range" min="1" max="100" value="10"></div>
+          <div><label for="mkey">API key</label><select id="mkey" class="inp"><option>Default key</option><option>Custom key for Master AI...</option></select></div>
+        </div>
+        <p><small style="color:var(--mute)">The Master AI can only change settings through the same approval rules as you. It cannot see your API keys.</small></p>
+      </div>
+      <button class="primary savebtn">Save Master AI settings</button>
+    </div>
+
+    <div id="s-models" class="spane" hidden>
+      <div class="panel"><h3>Providers and default keys</h3>
+        <table><tr><th>Provider</th><th>Default key</th><th>Status</th><th></th></tr>
+          <tr><td><b>OpenRouter</b><br><small>one key, hundreds of models</small><br><label class="inl"><input type="checkbox" id="useor" checked> Use as provider</label></td><td><input type="password" class="inp key" aria-label="OpenRouter API key" placeholder="sk-or-v1-..." autocomplete="off"></td><td class="st">Not set<br><small id="orupd" style="color:var(--mute)"></small></td><td><button class="tkey">Test &amp; save</button></td></tr>
+          <tr><td>OpenAI</td><td><input type="password" class="inp key" aria-label="OpenAI API key" placeholder="sk-..." autocomplete="off"></td><td class="st">Not set</td><td><button class="tkey">Test &amp; save</button></td></tr>
+          <tr><td>Anthropic</td><td><input type="password" class="inp key" aria-label="Anthropic API key" placeholder="sk-ant-..." autocomplete="off"></td><td class="st">Not set</td><td><button class="tkey">Test &amp; save</button></td></tr>
+          <tr><td>Google</td><td><input type="password" class="inp key" aria-label="Google API key" placeholder="AI..." autocomplete="off"></td><td class="st">Not set</td><td><button class="tkey">Test &amp; save</button></td></tr>
+          <tr><td>Local (Ollama)</td><td><small>No key needed</small></td><td class="st">Found on this computer</td><td><button>Choose models</button></td></tr>
+        </table>
+        <p><small style="color:var(--mute)">Keys are stored in your computer's secure vault (Windows Credential Manager / macOS Keychain), never in assistant files, logs or AI conversations. After saving, a key is shown only as ••••1234.</small></p>
+      </div>
+      <div class="panel"><h3>OpenRouter keys and spending limits</h3>
+        <p style="margin-top:0">OpenRouter lets each key have its own hard spending limit that resets daily, weekly or monthly. Nomad uses this as a second safety net next to its own budgets: even if Nomad failed, OpenRouter would stop the spending.</p>
+        <table><tr><th>Key</th><th>Used for</th><th>Limit at OpenRouter</th><th>Used</th></tr>
+          <tr><td>Default key ••••a41f</td><td>Everything on default</td><td><span class="m" data-usd="35"></span> / month</td><td><meter min="0" max="35" value="14.4" aria-label="14.40 of 35 dollars"></meter> <span class="m" data-usd="14.4"></span></td></tr>
+          <tr><td>Invoice Helper ••••7c02</td><td>Invoice Helper only</td><td><span class="m" data-usd="2"></span> / month</td><td><meter min="0" max="2" value="0.7" aria-label="0.70 of 2 dollars"></meter> <span class="m" data-usd="0.7"></span></td></tr></table>
+        <label class="inl" style="margin-top:10px"><input type="checkbox" id="mgmt"> Let Nomad create limited keys for me automatically (needs an OpenRouter <em>management key</em>)</label>
+        <div id="mgmtbox" hidden><p><input type="password" class="inp" aria-label="OpenRouter management key" placeholder="Management key (only creates and monitors keys, cannot run models)" autocomplete="off"></p>
+          <small style="color:var(--mute)">When you give a task its own budget, Nomad creates a matching key with the same limit, and revokes it when the task is deleted. The new key goes straight into the secure vault. Nomad never shows you or the AI the management key.</small></div>
+        <p><small style="color:var(--mute)">Prefer to do it yourself? Create keys on openrouter.ai, set the limit there, and paste the key in the task settings.</small></p>
+      </div>
+      <div class="panel"><h3>What "Fast / Balanced / Best" means</h3>
+        <table><tr><th>Level</th><th>Model (your shortlist is listed first)</th><th>Price in / out per 1M tokens</th></tr>
+          <tr><td>Fast</td><td><select class="inp modelsel tier" data-tier="Fast" aria-label="Model for Fast"></select></td><td class="tierp"></td></tr>
+          <tr><td>Balanced</td><td><select class="inp modelsel tier" data-tier="Balanced" aria-label="Model for Balanced"></select></td><td class="tierp"></td></tr>
+          <tr><td>Best</td><td><select class="inp modelsel tier" data-tier="Best" aria-label="Model for Best"></select></td><td class="tierp"></td></tr></table>
+        <p><small style="color:var(--mute)">You decide what each level means. "Auto" uses <b>Nomad's own picks</b>, chosen by us for reliability, tool use and price. Before an Auto pick changes you get a notice with the reason and can keep the old model. Pick any model from your shortlist, or browse the <a href="#" id="tolib">Model library</a>.</small></p>
+      </div>
+      <div class="panel"><h3>Currency</h3>
+        <p style="margin-top:0">Costs are shown in the currency you are charged (<b>USD</b>, by OpenRouter), with an estimate in your own currency next to them.</p>
+        <div class="grid"><div><label for="cur">Your currency</label><select id="cur" class="inp"><option>EUR</option><option>GBP</option><option>CAD</option><option>AUD</option><option>CHF</option><option>JPY</option><option>INR</option></select></div>
+          <div><label>Exchange rate</label><span id="fxinfo"></span></div></div>
+        <small style="color:var(--mute)">Estimates use a daily exchange rate and can differ from what your card or bank charges (bank fees and rate differences). The USD amount is what limits and budgets are enforced on.</small>
+      </div>
+      <div class="panel"><h3>Global safety limits</h3>
+        <div class="grid"><div><label for="gcap">Total monthly spend across everything: <b class="m" id="gcv" data-usd="35"></b></label><input id="gcap" type="range" min="5" max="350" value="35"></div>
+          <div><label for="fb">When a spending limit is reached</label><select id="fb" class="inp"><option selected>Important tasks: pause and ask me. Other tasks: stop and tell me (recommended)</option><option>Always pause and ask me</option><option>Always stop and tell me</option></select></div>
+          <div><label for="fb2">If a model is unavailable</label><select id="fb2" class="inp"><option>Pause and ask me</option><option>Use fallback model from my shortlist</option><option>Stop the task</option></select></div></div>
+        <small style="color:var(--mute)">A paused task never spends beyond the limit while waiting. If you approve, you choose how much extra to allow.</small>
+      </div>
+      <div class="panel"><h3>When a task is paused and waiting for you</h3>
+        <div class="grid">
+          <div><label>Reach me by</label>
+            <label class="inl"><input type="checkbox" id="npush" checked> Push notification (phone and desktop)</label>
+            <label class="inl"><input type="checkbox" id="nmail" checked> Email</label>
+            <small style="color:var(--mute)">Both are on by default, so one missed message does not stop the task.</small></div>
+          <div><label for="wait">Wait for my answer</label><select id="wait" class="inp"><option value="1">1 hour</option><option value="4">4 hours</option><option value="12" selected>12 hours (recommended)</option><option value="24">24 hours</option><option value="48">48 hours</option></select>
+            <small style="color:var(--mute)">Reminders are sent at the halfway point and 1 hour before the end.</small></div>
+          <div><label>If I do not answer in time</label><div><b>The task is aborted.</b> Nothing risky happens by default.</div>
+            <small style="color:var(--mute)">You then get a full report of what was done, why it stopped, the logic, and the consequences.</small></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="s-library" class="spane" hidden>
+      <div class="panel"><h3>Model library <small id="libsrc" style="color:var(--mute);font-weight:normal"></small></h3>
+        <p class="inl" style="margin-top:0"><small id="libupd" style="color:var(--mute)"></small> <button id="refresh">Refresh now</button></p>
+        <div id="libnote" class="note" hidden role="status"></div>
+        <div class="grid">
+          <div><label for="suit">Suited for</label><select id="suit" class="inp">
+            <option value="all">All models (no pre-filter)</option>
+            <option value="everyday" selected>Everyday tasks: affordable, can use tools</option>
+            <option value="docs">Reading long documents and web research</option>
+            <option value="master">Master AI: chat, tools, reasoning</option>
+            <option value="cheap">Simple, high-volume tasks: cheapest</option>
+            <option value="hard">Hard problems: strongest reasoning</option></select></div>
+          <div><label for="fvar">Version type</label><select id="fvar" class="inp"><option value="std">Standard only (recommended)</option></select></div>
+          <div><label for="q">Search</label><input id="q" class="inp" type="search" placeholder="Name, provider or topic (e.g. claude, legal, vision)"></div>
+          <div><label for="fprov">Provider</label><select id="fprov" class="inp"><option value="">All providers</option></select></div>
+          <div><label for="fsort">Sort by</label><select id="fsort" class="inp"><option value="new">Newest</option><option value="name">Name</option><option value="pin">Price: input, low to high</option><option value="pout">Price: output, low to high</option><option value="ctx">Context size, largest</option></select></div>
+          <div><label for="fmax">Max input price per 1M tokens: <b id="fmaxv">any</b></label><input id="fmax" type="range" min="0" max="21" value="21"></div>
+        </div>
+        <p class="chips" id="fchips">
+          <label class="inl"><input type="checkbox" data-f="fav"> Shortlist only</label>
+          <label class="inl"><input type="checkbox" data-f="tools"> Can use tools</label>
+          <label class="inl"><input type="checkbox" data-f="reason"> Reasoning</label>
+          <label class="inl"><input type="checkbox" data-f="image"> Understands images</label>
+          <label class="inl"><input type="checkbox" data-f="long"> Long documents (200k+)</label>
+        </p>
+        <div id="varwarn" class="note warn" hidden role="status"></div>
+        <p id="libcount" aria-live="polite" style="color:var(--mute);margin:0 0 6px"></p>
+        <div class="tablewrap"><table id="libtable"><thead><tr><th><span class="sr">Shortlist</span></th><th>Model</th><th>Context</th><th>Input / 1M</th><th>Output / 1M</th></tr></thead><tbody></tbody></table></div>
+        <p><button id="more" hidden>Show more</button></p>
+      </div>
+      <div class="panel" id="mdetail" hidden aria-live="polite"></div>
+    </div>
+
+    <div id="s-tasks" class="spane" hidden>
+      <div class="panel"><h3>Rule Watcher <span class="tag">monthly</span> <span class="tag">Research: policy changes, website monitoring</span></h3>
+        <label class="inl"><input type="checkbox" class="usedef" checked> Use default settings</label>
+        <label class="inl"><input type="checkbox" class="imp2" checked> <b>Important task</b> <small style="color:var(--mute)">(at a spending limit: pause and ask, instead of stopping)</small></label>
+        <div class="ovr" hidden>
+          <div class="grid">
+            <div><label>Model</label><select class="inp modelsel"><option>Balanced</option><option>Fast</option><option>Best</option></select></div>
+            <div><label>Thinking depth</label><select class="inp"><option>Low</option><option selected>Medium</option><option>High</option></select></div>
+            <div><label>Spending limits (USD)</label>
+              <div class="limits"><div class="lim"><input class="inp lamt" type="number" value="1.5" min="0.1" step="0.1" aria-label="Amount in US dollars"> <select class="inp" aria-label="Period"><option>per run</option><option>per day</option><option>per week</option><option selected>per month</option></select> <small class="eur"></small></div></div>
+              <button class="addlim">+ Add another limit</button></div>
+            <div><label>When a limit is reached</label><select class="inp lact"><option value="ask">Pause and ask me</option><option value="stop">Stop and tell me</option></select></div>
+            <div><label>API key</label><select class="inp keysel"><option>Default key</option><option>Use another saved key</option><option>Enter a key just for this task...</option></select>
+              <input type="password" class="inp taskkey" aria-label="Task-specific API key" placeholder="Paste key" autocomplete="off" hidden></div>
+            <div><label>Approval needed for</label><select class="inp"><option>Anything that contacts others</option><option>Everything</option><option>Only irreversible actions</option></select></div>
+            <div><label>Different model for checking results</label><select class="inp"><option>Same as above</option><option>Different provider (recommended for important tasks)</option></select></div>
+          </div>
+        </div>
+        <p class="sum"><small>Uses defaults: Balanced, Medium depth, default limits, default key. Important: pauses and asks at a limit.</small></p>
+      </div>
+      <div class="panel"><h3>Invoice Helper <span class="tag">Fridays</span> <span class="tag">Business: invoices, support replies</span> <span class="tag expl">asks before sending or spending</span></h3>
+        <label class="inl"><input type="checkbox" class="usedef"> Use default settings</label>
+        <label class="inl"><input type="checkbox" class="imp2"> <b>Important task</b> <small style="color:var(--mute)">(at a spending limit: pause and ask, instead of stopping)</small></label>
+        <div class="ovr">
+          <div class="grid">
+            <div><label>Model</label><select class="inp modelsel"><option>Fast</option><option>Balanced</option></select></div>
+            <div><label>Thinking depth</label><select class="inp"><option selected>Low</option><option>Medium</option></select></div>
+            <div><label>Spending limits (USD)</label>
+              <div class="limits"><div class="lim"><input class="inp lamt" type="number" value="0.5" min="0.1" step="0.1" aria-label="Amount in US dollars"> <select class="inp" aria-label="Period"><option selected>per run</option><option>per day</option><option>per week</option><option>per month</option></select> <small class="eur"></small></div><div class="lim"><input class="inp lamt" type="number" value="2" min="0.1" step="0.1" aria-label="Amount in US dollars"> <select class="inp" aria-label="Period"><option>per run</option><option>per day</option><option>per week</option><option selected>per month</option></select> <small class="eur"></small></div></div>
+              <button class="addlim">+ Add another limit</button></div>
+            <div><label>When a limit is reached</label><select class="inp lact"><option value="ask">Pause and ask me</option><option value="stop" selected>Stop and tell me</option></select></div>
+            <div><label>API key</label><select class="inp keysel"><option>Default key</option><option selected>Enter a key just for this task...</option></select>
+              <input type="password" class="inp taskkey" aria-label="Task-specific API key" placeholder="Paste key" autocomplete="off"></div>
+          </div>
+        </div>
+        <p class="sum"><small>Custom: Fast, Low depth, own limits, own key. Not important: stops at a limit.</small></p>
+      </div>
+      <p><small style="color:var(--mute)">Anything you leave on "default" follows the Master AI and Models &amp; keys pages. You can also ask Nomad in chat: "make Rule Watcher use the best model."</small></p>
+    </div>
+  </section>
+</main>
+
+<aside id="masterpanel" aria-label="Master AI">
+  <div class="head"><b>Master AI</b><span class="tag">manages all assistants</span><button id="hidemaster" aria-label="Hide Master AI panel" title="Hide">&times;</button></div>
+  <div id="log" role="log" aria-live="polite"></div>
+  <div id="sugg" aria-label="Suggestions"></div>
+  <form id="f"><input id="t" aria-label="Message" placeholder="Ask Master AI..."><button class="primary">Send</button></form>
+</aside>
+
+<script>
+const $ = s => document.querySelector(s), log = $('#log');
+function say(text, who='ai', chips=[]) {
+  const d = document.createElement('div'); d.className = 'msg ' + who; d.textContent = text;
+  if (chips.length) { const c = document.createElement('div'); c.className = 'chips';
+    chips.forEach(([l, fn]) => { const b = document.createElement('button'); b.textContent = l; b.onclick = () => { c.remove(); fn(); }; c.append(b); });
+    d.append(c); }
+  log.append(d); log.scrollTop = log.scrollHeight;
+}
+// Task builder boxes: each box can be shown/hidden, resized, edited, dragged or moved. Approval is locked on for safety.
+const BOXES = [
+  { id:'trigger', name:'Trigger', text:'Every month, 1st at 09:00', on:true, size:1 },
+  { id:'sources', name:'Sources', text:'gov.nl, belastingdienst.nl, kvk.nl', on:true, size:1 },
+  { id:'read', name:'Read', text:'Web pages and PDFs', on:true, size:1 },
+  { id:'check', name:'Check', text:'Every claim has a link', on:true, size:1 },
+  { id:'approval', name:'Approval', text:'You approve before anything is sent', on:true, size:1, locked:true },
+  { id:'output', name:'Output', text:'Report in your Inbox', on:true, size:1 },
+  { id:'budget', name:'Budget', text:'Max $2 per month, then pause and ask', on:false, size:1 },
+  { id:'notes', name:'Notes', text:'Click to write your own notes', on:false, size:2 },
+  { id:'deadline', name:'Deadline', text:'Report ready by the 3rd', on:false, size:1 }
+];
+const BKEY = 'nn_blayout';
+let blay; try { blay = JSON.parse(localStorage.getItem(BKEY)); } catch (e) {}
+const defB = () => BOXES.map(b => ({ id:b.id, on:b.on, size:b.size, text:b.text }));
+if (!Array.isArray(blay) || blay.length !== BOXES.length || blay.some(b => !BOXES.find(x => x.id === b.id))) blay = defB();
+const saveB = () => { try { localStorage.setItem(BKEY, JSON.stringify(blay)); } catch (e) {} };
+let built = false, animateNext = false;
+function renderBoxes() {
+  const f = $('#flow'); f.innerHTML = '';
+  blay.filter(l => built && l.on).forEach((l, i) => {
+    const d = BOXES.find(x => x.id === l.id), b = document.createElement('div');
+    b.className = 'block s' + l.size + (animateNext ? ' new' : ''); b.dataset.id = l.id; if (animateNext) b.style.animationDelay = i * 0.35 + 's';
+    const h = document.createElement('button'); h.className = 'grip'; h.textContent = '\u2807'; h.title = 'Drag to move'; h.setAttribute('aria-label', 'Drag ' + d.name + ' to move it');
+    h.onmousedown = () => b.draggable = true; h.onmouseup = () => b.draggable = false;
+    b.ondragstart = e => { e.dataTransfer.setData('text/plain', l.id); b.classList.add('drag'); }; b.ondragend = () => { b.draggable = false; b.classList.remove('drag'); };
+    b.ondragover = e => e.preventDefault();
+    b.ondrop = e => { e.preventDefault(); const id = e.dataTransfer.getData('text/plain'); if (!id || id === l.id) return; const from = blay.findIndex(x => x.id === id), item = blay.splice(from, 1)[0]; blay.splice(blay.findIndex(x => x.id === l.id), 0, item); saveB(); renderBoxes(); };
+    const n = document.createElement('b'); n.textContent = d.name + (d.locked ? ' (always on)' : '');
+    const t = document.createElement('span'); t.contentEditable = d.locked ? 'false' : 'true'; t.setAttribute('role', 'textbox'); t.setAttribute('aria-label', d.name + ' text'); t.textContent = l.text;
+    t.onblur = () => { l.text = t.textContent; saveB(); };
+    b.append(h, n, t); f.append(b);
+  });
+  animateNext = false;
+  const rows = $('#brows'); rows.innerHTML = '';
+  blay.forEach((l, i) => { const d = BOXES.find(x => x.id === l.id), r = document.createElement('div'); r.className = 'row';
+    r.innerHTML = '<label><input type="checkbox"' + (l.on ? ' checked' : '') + (d.locked ? ' disabled' : '') + '> ' + d.name + (d.locked ? ' (always on, for your safety)' : '') + '</label><select class="inp" style="width:auto" aria-label="Size of ' + d.name + '"><option value="1">Small</option><option value="2">Wide</option></select><button aria-label="Move ' + d.name + ' up">&uarr;</button><button aria-label="Move ' + d.name + ' down">&darr;</button>';
+    const [c, s, up, dn] = [r.querySelector('input'), r.querySelector('select'), ...r.querySelectorAll('button')]; s.value = l.size;
+    c.onchange = () => { l.on = c.checked; saveB(); renderBoxes(); }; s.onchange = () => { l.size = +s.value; saveB(); renderBoxes(); };
+    up.onclick = () => { if (i) { [blay[i - 1], blay[i]] = [blay[i], blay[i - 1]]; saveB(); renderBoxes(); } };
+    dn.onclick = () => { if (i < blay.length - 1) { [blay[i + 1], blay[i]] = [blay[i], blay[i + 1]]; saveB(); renderBoxes(); } };
+    rows.append(r); });
+}
+function build() {
+  $('#title').textContent = 'Rule Watcher'; $('#sub').textContent = 'Checks government sites monthly for rule changes affecting you.';
+  built = true; animateNext = true; renderBoxes();
+  setTimeout(() => $('#settings').hidden = false, blay.filter(l => l.on).length * 350);
+}
+$('#badjust').onclick = () => { const h = $('#bcust').hidden; $('#bcust').hidden = !h; $('#badjust').setAttribute('aria-expanded', h); };
+$('#breset').onclick = () => { blay = defB(); saveB(); renderBoxes(); };
+renderBoxes();
+
+// Master AI can organize the layout: pick the boxes or widgets by name, or use a preset
+const ALIAS = {
+  dash: { quick:['quick','task box','input box'], agenda:['agenda','today'], status:['status'], activity:['activity','recent'], budget:['spending','budget','money','cost'], secretary:['secretary'], idea:['idea box','ideas box','idea'] },
+  build: { trigger:['trigger','schedule','when'], sources:['sources','source'], read:['read'], check:['check'], approval:['approval'], output:['output','result'], budget:['budget','spend','money','cost'], notes:['notes','note'], deadline:['deadline'] }
+};
+let cur = 'overview', undoFn = null;
+const sizeName = ['', 'small', 'wide', 'full width'];
+function findTargets(t, map) { return Object.keys(map).filter(k => map[k].some(a => new RegExp('\\b' + a + 's?\\b').test(t))); }
+function layoutIntent(raw) {
+  if (menuIntent(raw)) return true;
+  const t = raw.toLowerCase(), onB = cur === 'canvas', list = onB ? blay : lay.w, map = onB ? ALIAS.build : ALIAS.dash;
+  const word = /\b(layout|organi[sz]e|dashboard|this page|my page|simplify|simple|minimal|calm|clean up|tidy|reset|boxes|widgets)\b/.test(t);
+  const hide = /\b(hide|remove|without|get rid of|don'?t need|turn off)\b/.test(t), show = /\b(show|add|bring back|include|turn on)\b/.test(t);
+  const bigger = /\b(bigger|larger|wider|widen|full width|enlarge)\b/.test(t), smaller = /\b(smaller|narrow|shrink)\b/.test(t);
+  const top = /\b(top|first|up)\b/.test(t), bottom = /\b(bottom|last|down)\b/.test(t) && !top;
+  const targets = findTargets(t, map), masterT = /\b(master|chat|message box|panel)\b/.test(t);
+  if (!word && !(targets.length && (hide || show || bigger || smaller || top || bottom)) && !(masterT && (hide || show))) return false;
+  say(raw, 'me');
+  const snap = JSON.stringify(onB ? blay : lay), msgs = [];
+  const reply = () => { if (!msgs.length) { const c = onB ? [['Simplify', 'simplify this page'], ['Add a budget box', 'add a budget box'], ['Reset boxes', 'reset the layout']] : [['Simplify', 'simplify this page'], ['Focus on spending', 'focus on spending'], ['Focus on the agenda', 'focus on agenda'], ['Reset', 'reset the layout']];
+      say('How would you like it? Pick one, or tell me in your own words, e.g. "hide agent status" or "make the agenda full width". I always show what I changed and you can undo it.', 'ai', c.map(([l, q]) => [l, () => layoutIntent(q)])); return; }
+    say('Done. ' + msgs.join(' ') + ' You can undo this or fine-tune it under Customize.', 'ai', [['Undo', () => { if (onB) { blay = JSON.parse(snap); saveB(); renderBoxes(); } else { lay = JSON.parse(snap); saveLay(); applyLay(); } say('Undone. Your layout is back as it was.'); }]]); };
+  if (!onB && masterT && (hide || show) && !targets.length) { const m = /\bmessage box\b/.test(t) ? 'msg' : 'master'; lay[m] = show && !hide; msgs.push(lay[m] ? 'The Master AI ' + (m === 'msg' ? 'message box is shown.' : 'panel is shown.') : 'The Master AI ' + (m === 'msg' ? 'message box is hidden.' : 'panel is hidden (bring it back with "Show Master AI" at the top).')); saveLay(); applyLay(); setTimeout(reply, 300); return true; }
+  const set = (id, on) => { const l = list.find(x => x.id === id), d = (onB ? BOXES : WIDGETS).find(x => x.id === id);
+    if (d.locked && !on) { msgs.push('The ' + d.name + ' box stays on: it makes sure nothing with real consequences happens without you.'); return; } l.on = on; msgs.push((on ? 'Showing ' : 'Hid ') + d.name + '.'); };
+  if (/\b(reset|default|everything back|original)\b/.test(t)) { if (onB) blay = defB(); else lay = DEFLAY(); msgs.push('Back to the default layout.'); }
+  else if (/\b(simplify|simple|minimal|calm|clean up|tidy|less)\b/.test(t) && !targets.length) {
+    const keep = onB ? ['trigger', 'sources', 'approval', 'output'] : ['quick', 'agenda', 'activity'];
+    list.forEach(l => { const d = (onB ? BOXES : WIDGETS).find(x => x.id === l.id); l.on = keep.includes(l.id) || !!d.locked; });
+    if (!onB) { lay.w.find(x => x.id === 'agenda').size = 3; lay.w.find(x => x.id === 'activity').size = 3; lay.msg = true; }
+    msgs.push('Simplified: ' + keep.join(', ') + ' only.'); }
+  else if (/\b(focus|priorit[iy][sz]e)\b/.test(t) && targets.length) {
+    const id = targets[0]; list.forEach(l => { const d = (onB ? BOXES : WIDGETS).find(x => x.id === l.id); l.on = l.id === id || !!d.locked || l.id === 'quick'; }); const l = list.find(x => x.id === id); l.on = true; l.size = onB ? 2 : 3; list.splice(list.indexOf(l), 1); list.unshift(l); msgs.push('Focused on ' + (onB ? BOXES : WIDGETS).find(x => x.id === id).name + ' and moved it to the top.'); }
+  else if (/\b(focus|priorit[iy][sz]e)\b/.test(t)) { msgs.length = 0; }
+  else t.split(/\band\b|,|;|\bthen\b/).forEach(cl => { const tg = findTargets(cl, map);
+    const h = /\b(hide|remove|without|get rid of|don'?t need|turn off)\b/.test(cl), s = /\b(show|add|bring back|include|turn on)\b/.test(cl), bg = /\b(bigger|larger|wider|widen|full width|enlarge)\b/.test(cl), sm = /\b(smaller|narrow|shrink)\b/.test(cl), tp = /\b(top|first|up)\b/.test(cl), bt = /\b(bottom|last|down)\b/.test(cl) && !tp;
+    tg.forEach(id => { const l = list.find(x => x.id === id), d = (onB ? BOXES : WIDGETS).find(x => x.id === id), max = onB ? 2 : 3;
+      if (h) set(id, false); else if (s) set(id, true);
+      if (bg) { l.on = true; l.size = Math.min(max, l.size + 1); msgs.push(d.name + ' is now ' + (onB ? (l.size === 2 ? 'wide' : 'small') : sizeName[l.size]) + '.'); }
+      if (sm) { l.size = Math.max(1, l.size - 1); msgs.push(d.name + ' is now ' + (l.size === 1 ? 'small' : 'smaller') + '.'); }
+      if (tp || bt) { const i = list.indexOf(l); list.splice(i, 1); tp ? list.unshift(l) : list.push(l); msgs.push(d.name + ' moved to the ' + (tp ? 'top' : 'bottom') + '.'); } }); });
+  if (onB) { saveB(); renderBoxes(); } else { saveLay(); applyLay(); }
+  setTimeout(reply, 300); return true;
+}
+function route(v, quick) { if (layoutIntent(v)) return; if (quick) go('canvas'); start(v); }
+function start(text) {
+  say(text, 'me');
+  setTimeout(() => say('Happy to. Which country or countries should I watch?', 'ai', [['Netherlands', step2], ['Several countries', step2]]), 400);
+}
+function step2() {
+  setTimeout(() => say('And how should I tell you about changes?', 'ai', [['Report in my Inbox', step3], ['Email me', step3]]), 300);
+}
+function step3() {
+  setTimeout(() => { say('Here is my plan. I put it on the right so you can check it. Nothing runs until you confirm the settings.'); build(); }, 300);
+}
+$('#f').onsubmit = e => { e.preventDefault(); const v = $('#t').value.trim(); if (v) { $('#t').value = ''; route(v); } };
+say('Hi! Tell me what you would like off your plate. Plain words are fine.', 'ai', [['Check government sites monthly for rule changes', () => start('Check government websites every month for rule changes that affect my business')]]);
+
+const VIEWS = { settings:'settings-view', detail:'taskdetail' };
+document.addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (b) { e.preventDefault(); go(b.dataset.v); } });
+function go(v) { const id = VIEWS[v] || v;
+  document.querySelectorAll('main > section').forEach(s => s.hidden = s.id !== id);
+  document.querySelectorAll('.side .nv').forEach(x => { if (x.dataset.v === v) x.setAttribute('aria-current', 'page'); else x.removeAttribute('aria-current'); });
+  $('main').scrollTop = 0; }
+
+// Overview: every widget and input box is optional and adjustable (show/hide, size, order), saved on this device
+const WIDGETS = [
+  { id:'quick', name:'Quick task box', size:3, on:true, html: () => '<form class="quick" id="qf"><input class="inp" id="qi" aria-label="Describe a task" placeholder="Describe a task in your own words, e.g. every Monday summarize my inbox"><button class="primary">Start</button></form>' },
+  { id:'agenda', name:"Today's agenda", size:2, on:true, html: () => '<ul>' + [['09:00','Market research summary','Researcher','r','Pending','pend'],['10:00','Blog draft: AI productivity','Writer','w','Draft','prog'],['13:00','Team sync prep','Scheduler','s','Planned',''],['15:00','Sales data analysis','Data Assistant','d','Planned','']].map(a => '<li data-v="detail"><i class="dot c-' + a[3] + '"></i><span class="t">' + a[0] + '</span>' + a[1] + ' <small style="color:var(--mute)">' + a[2] + '</small>' + (a[5] ? '<span class="badge ' + a[5] + '">' + a[4] + '</span>' : '') + '</li>').join('') + '</ul><button data-v="agenda" style="margin-top:8px">View full agenda</button>' },
+  { id:'status', name:'Agent status', size:1, on:true, html: () => '<ul>' + [['Researcher','Working','r'],['Writer','Idle','w'],['Scheduler','Idle','s'],['Data Assistant','Waiting for you','d']].map(a => '<li><i class="dot c-' + a[2] + '"></i>' + a[0] + '<span class="badge ' + (a[1] === 'Working' ? 'prog' : a[1] === 'Idle' ? 'done' : 'pend') + '">' + a[1] + '</span></li>').join('') + '</ul>' },
+  { id:'activity', name:'Recent activity', size:2, on:true, html: () => '<ul>' + [['30m','Researcher completed "Industry trends scan"','Completed','done'],['1h','Writer started "Blog draft: AI productivity"','In progress','prog'],['2h','Scheduler updated "Team sync & prep"','Updated','']].map(a => '<li data-v="inbox"><span class="t">' + a[0] + ' ago</span>' + a[1] + '<span class="badge ' + a[3] + '">' + a[2] + '</span></li>').join('') + '</ul>' },
+  { id:'budget', name:'Spending', size:1, on:true, html: () => 'This month <b class="m" data-usd="1.40"></b> of <b class="m" data-usd="10"></b><div class="bar"><i style="width:14%"></i></div>  <small style="color:var(--mute)">Hard limit protects you at <span class="m" data-usd="10"></span>.</small>' },
+    { id:'secretary', name:'Secretary', size:1, on:true, html: () => '<p style="margin:0 0 8px">Drop a bill, letter or email and I sort it out.</p><button class="primary" data-v="secretary">Open Secretary</button>' },
+    { id:'idea', name:'Idea box', size:1, on:false, html: () => '<form class="quick" id="qif"><input class="inp" id="qidea" aria-label="Quick idea" placeholder="Jot an idea..."><button class="primary">Save</button></form><small style="color:var(--mute)">Saved to Ideas.</small>' }
+  ];
+const LKEY = 'nn_layout', DEFLAY = () => ({ master:true, msg:true, w:WIDGETS.map(w => ({ id:w.id, on:w.on, size:w.size })) });
+let lay; try { lay = JSON.parse(localStorage.getItem(LKEY)); } catch (e) {}
+if (!lay || !Array.isArray(lay.w) || lay.w.length !== WIDGETS.length) lay = DEFLAY();
+const saveLay = () => { try { localStorage.setItem(LKEY, JSON.stringify(lay)); } catch (e) {} };
+function applyLay() {
+  document.body.classList.toggle('nomaster', !lay.master);
+  $('#showmaster').hidden = lay.master; $('#optmaster').checked = lay.master; $('#optmsg').checked = lay.msg; $('#f').hidden = !lay.msg;
+  const box = $('#widgets'); box.innerHTML = '';
+  lay.w.forEach(l => { if (!l.on) return; const d = WIDGETS.find(w => w.id === l.id), el = document.createElement('div');
+    el.className = 'w s' + l.size; el.innerHTML = '<h3>' + d.name + '</h3>' + d.html(); box.append(el); });
+  const q = $('#qf'); if (q) q.onsubmit = e => { e.preventDefault(); const v = $('#qi').value.trim(); if (v) route(v, true); };
+  const qd = $('#qif'); if (qd) qd.onsubmit = e => { e.preventDefault(); const v = $('#qidea').value.trim(); if (v) { addNote(v); $('#qidea').value = ''; say('Idea saved and sorted.', 'ai', [['Open Ideas', () => openModule('notes')]]); } };
+  const rows = $('#custrows'); rows.innerHTML = '';
+  lay.w.forEach((l, i) => { const d = WIDGETS.find(w => w.id === l.id), r = document.createElement('div'); r.className = 'row';
+    r.innerHTML = '<label><input type="checkbox"' + (l.on ? ' checked' : '') + '> ' + d.name + '</label><select class="inp" style="width:auto" aria-label="Size of ' + d.name + '"><option value="1">Small</option><option value="2">Wide</option><option value="3">Full width</option></select><button aria-label="Move ' + d.name + ' up">&uarr;</button><button aria-label="Move ' + d.name + ' down">&darr;</button>';
+    const [c, s, up, dn] = [r.querySelector('input'), r.querySelector('select'), ...r.querySelectorAll('button')]; s.value = l.size;
+    c.onchange = () => { l.on = c.checked; saveLay(); applyLay(); }; s.onchange = () => { l.size = +s.value; saveLay(); applyLay(); };
+    up.onclick = () => { if (i) { [lay.w[i - 1], lay.w[i]] = [lay.w[i], lay.w[i - 1]]; saveLay(); applyLay(); } };
+    dn.onclick = () => { if (i < lay.w.length - 1) { [lay.w[i + 1], lay.w[i]] = [lay.w[i], lay.w[i + 1]]; saveLay(); applyLay(); } };
+    rows.append(r); });
+  renderMoney();
+}
+$('#custbtn').onclick = () => { const h = $('#cust').hidden; $('#cust').hidden = !h; $('#custbtn').setAttribute('aria-expanded', h); };
+$('#optmaster').onchange = e => { lay.master = e.target.checked; saveLay(); applyLay(); };
+$('#optmsg').onchange = e => { lay.msg = e.target.checked; saveLay(); applyLay(); };
+$('#custreset').onclick = () => { lay = DEFLAY(); saveLay(); applyLay(); };
+$('#hidemaster').onclick = () => { document.body.classList.remove('showmaster'); lay.master = false; saveLay(); applyLay(); };
+$('#showmaster').onclick = () => { lay.master = true; saveLay(); applyLay(); document.body.classList.add('showmaster'); };
+
+// Master AI suggestions (change with the current view)
+const SUGG = { overview:['Organize this page for me','Simplify this page','Focus on spending','Help me set this up'], finances:['What do I still have to pay?','Where does my money go?'], secretary:['What can you do with a bill?','Explain a government letter'], agents:['Help me choose an agent','Compare agent capabilities','Suggest automations'], canvas:['Add a budget box','Simplify this page','Refine instructions','Suggest approval rules'], agenda:['Reschedule tasks','Check for conflicts','Add focus time'], detail:['Suggest changes','View key highlights','Compare with last week'], inbox:['Explain this decision','What needs me first?'], types:['Which type fits me?'], why:['Explain in simple words'], tools:['Is this tool safe?'], settings:['Explain these settings','Recommend a model for my budget'] };
+const origGo = go; go = function (v) { cur = v; origGo(v); const s = $('#sugg'); s.innerHTML = ''; (SUGG[v] || []).forEach(t => { const b = document.createElement('button'); b.textContent = t; b.onclick = () => { if (layoutIntent(t)) return; say(t, 'me'); setTimeout(() => say('Prototype note: in the real app I would answer this using your current view (' + v + ') and show my reasoning in the Why log.'), 400); }; s.append(b); }); };
+
+// Agents library
+[['Researcher','r','Finds information, analyzes trends and summarizes findings.',['Searching','Reports','Summaries'],'Available'],['Writer','w','Creates ready-to-review content tailored to your needs.',['Blog posts','Copywriting','Editing'],'Available'],['Scheduler','s','Plans meetings, coordinates calendars and manages time.',['Scheduling','Reminders','Planning'],'Available'],['Data Assistant','d','Analyzes data and builds actionable insights.',['Analysis','Charts','Reports'],'Busy: 1 task waiting']].forEach(a => {
+  const d = document.createElement('div'); d.className = 'agent'; d.innerHTML = '<h3><i class="dot c-' + a[1] + '"></i>' + a[0] + '</h3><p>' + a[2] + '</p><div>' + a[3].map(c => '<span class="mini">' + c + '</span>').join('') + '</div><p><small>' + a[4] + '</small></p><button class="primary" data-v="types">Assign task</button>';
+  $('#agentlist').append(d); });
+
+// Calendar week view
+const DAYS = ['Mon 12','Tue 13','Wed 14','Thu 15','Fri 16','Sat 17','Sun 18'], HRS = [9,10,11,12,13,14,15,16];
+const EVS = { '0-9':['r','Market research summary'], '1-10':['w','Blog draft: AI productivity'], '2-13':['r','Competitor scan'], '0-13':['s','Team sync & prep'], '1-14':['d','Data cleanup'], '4-9':['s','Weekly planning'], '4-16':['w','Newsletter draft'], '3-15':['s','Schedule: team meeting'], '5-11':['d','Sales data analysis'] };
+(function () { const c = $('#cal'); c.innerHTML = '<div class="h"></div>' + DAYS.map(d => '<div class="h">' + d + '</div>').join('');
+  HRS.forEach(h => { c.insertAdjacentHTML('beforeend', '<div class="hr">' + h + ':00</div>'); DAYS.forEach((d, i) => { const e = EVS[i + '-' + h];
+    c.insertAdjacentHTML('beforeend', '<div class="cell">' + (e ? '<button class="ev ' + e[0] + '" data-v="detail">' + e[1] + '</button>' : '') + '</div>'); }); }); })();
+document.querySelectorAll('[data-av]').forEach(b => b.onclick = () => { document.querySelectorAll('[data-av]').forEach(x => x.setAttribute('aria-pressed', x === b)); $('#calwrap').hidden = b.dataset.av === 'list'; $('#agtable').hidden = b.dataset.av !== 'list'; });
+
+// Task detail and builder buttons
+$('#dapprove').onclick = e => { const h = document.querySelector('#taskdetail h1 .badge'); h.textContent = 'Approved'; h.className = 'badge done'; e.target.disabled = true; say('Approved. I will run the task at the planned time and log every step.'); };
+$('#savetask').onclick = () => say('Saved. It now appears in your Agenda. Nothing with real consequences runs without your approval.');
+$('#testrun').onclick = () => { $('#dry').click(); };
+
+// Settings
+document.querySelectorAll('nav.sub button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('.spane').forEach(p => p.hidden = p.id !== b.dataset.s);
+  document.querySelectorAll('nav.sub button').forEach(x => x.setAttribute('aria-selected', x === b)); });
+const lvl = ['Brief','Balanced','Thorough'];
+function preview() {
+  const name = $('#mname').value || 'Nomad', tone = document.querySelector('.tone [aria-pressed=true]').textContent, d = $('#detail').value;
+  const t = { 'Friendly':'Hi! Your Rule Watcher found 2 changes this month', 'Professional':'Summary: the Rule Watcher identified 2 relevant changes', 'Short & direct':'2 changes found' };
+  const x = [' (details on request).', ', both about VAT. One needs action before 1 January.', ', both about VAT. One needs action before 1 January; here is why, with sources and what I considered but ignored.'];
+  $('#prev').textContent = name + ': ' + t[tone] + x[d];
+}
+$('#detail').oninput = e => { $('#dv').textContent = lvl[e.target.value]; preview(); };
+$('#mname').oninput = preview;
+$('.tone').onclick = e => { if (e.target.tagName === 'BUTTON') { document.querySelectorAll('.tone button').forEach(b => b.setAttribute('aria-pressed', b === e.target)); preview(); } };
+$('#mreason').oninput = e => $('#mrv').textContent = names[e.target.value];
+$('#mspend').oninput = e => { $('#msv').dataset.usd = e.target.value; renderMoney(); };
+$('#gcap').oninput = e => { $('#gcv').dataset.usd = e.target.value; renderMoney(); };
+document.querySelectorAll('.imp2').forEach(c => c.onchange = () => { const a = c.closest('.panel').querySelector('.lact'); if (a) a.value = c.checked ? 'ask' : 'stop'; });
+$('#imp').onchange = e => { $('#impnote').textContent = e.target.checked
+  ? 'Important: if a spending limit is reached, the task pauses and asks you whether to allow more. Nomad also suggests a second model to double-check the results.'
+  : 'Not important: if a spending limit is reached, the task stops and you are notified.'; };
+document.querySelectorAll('.usedef').forEach(c => c.onchange = () => { c.closest('.panel').querySelector('.ovr').hidden = c.checked; });
+document.querySelectorAll('.keysel').forEach(s => s.onchange = () => { s.parentNode.querySelector('.taskkey').hidden = !s.value.startsWith('Enter'); });
+document.querySelectorAll('.tkey').forEach(b => b.onclick = () => {
+  const row = b.closest('tr'), i = row.querySelector('.key'), st = row.querySelector('.st');
+  if (!i.value.trim()) { st.textContent = 'Please paste a key'; return; }
+  st.textContent = 'Saved ••••' + i.value.trim().slice(-4) + ' (tested OK)'; i.value = ''; });
+document.querySelector('.savebtn').onclick = () => say('Saved. From now on I will speak as ' + ($('#mname').value || 'Nomad') + '.');
+$('#mgmt').onchange = e => $('#mgmtbox').hidden = !e.target.checked;
+document.querySelectorAll('.addlim').forEach(b => b.onclick = () => {
+  const box = b.parentNode.querySelector('.limits'); box.append(box.firstElementChild.cloneNode(true)); renderMoney(); });
+document.addEventListener('input', e => { if (e.target.classList.contains('lamt')) renderMoney(); });
+
+// Currency: charged in USD, with an estimate in the user's currency
+const FXFALLBACK = { EUR:0.86, GBP:0.76, CAD:1.38, AUD:1.5, CHF:0.8, JPY:150, INR:84 };
+const SYM = { EUR:'€', GBP:'£', CAD:'CA$', AUD:'A$', CHF:'CHF ', JPY:'¥', INR:'₹' };
+let FX = { cur:'EUR', rate:FXFALLBACK.EUR, live:false };
+const dec = v => v >= 100 ? v.toFixed(0) : v >= 1 ? v.toFixed(2) : v >= 0.1 ? v.toFixed(2) : v.toFixed(3);
+const usdFmt = n => '$' + dec(n);
+const locFmt = n => '≈ ' + (SYM[FX.cur] || '') + dec(n * FX.rate);
+function renderMoney() {
+  document.querySelectorAll('[data-usd]').forEach(e => { const n = +e.dataset.usd; e.textContent = usdFmt(n) + ' (' + locFmt(n) + ')'; });
+  document.querySelectorAll('.lim').forEach(l => { const i = l.querySelector('.lamt'), s = l.querySelector('.eur'); if (i && s) s.textContent = locFmt(+i.value || 0); });
+  $('#fxinfo').textContent = '1 USD ≈ ' + FX.rate + ' ' + FX.cur + (FX.live ? ' (daily rate)' : ' (offline estimate, could not load today\'s rate)');
+}
+async function loadFx() {
+  FX = { cur:$('#cur').value, rate:FXFALLBACK[$('#cur').value], live:false }; renderMoney();
+  try { const r = await fetch('https://api.frankfurter.dev/v1/latest?base=USD&symbols=' + FX.cur); const j = await r.json(); if (j.rates?.[FX.cur]) { FX.rate = j.rates[FX.cur]; FX.live = true; } } catch {}
+  renderMoney(); if (typeof render === 'function' && MODELS.length) { render(); populateModelSelects(); }
+}
+$('#cur').onchange = loadFx;
+
+// Model library (live data from OpenRouter's public model list)
+const FALLBACK = [
+  { id:'anthropic/claude-sonnet', name:'Anthropic: Claude Sonnet (sample)', created:1790000000, context_length:200000, description:'Offline sample entry. Connect to the internet to load the live list.', architecture:{input_modalities:['text','image'],output_modalities:['text']}, pricing:{prompt:'0.000003',completion:'0.000015'}, supported_parameters:['tools','reasoning'], top_provider:{max_completion_tokens:64000} },
+  { id:'openai/gpt-mini', name:'OpenAI: GPT Mini (sample)', created:1780000000, context_length:128000, description:'Offline sample entry.', architecture:{input_modalities:['text'],output_modalities:['text']}, pricing:{prompt:'0.0000004',completion:'0.0000016'}, supported_parameters:['tools'], top_provider:{max_completion_tokens:16000} },
+  { id:'meta-llama/free-sample', name:'Meta: Llama (free, sample)', created:1770000000, context_length:32000, description:'Offline sample entry.', architecture:{input_modalities:['text'],output_modalities:['text']}, pricing:{prompt:'0',completion:'0'}, supported_parameters:[], top_provider:{} }
+];
+let MODELS = [], favs = new Set(JSON.parse(localStorage.getItem('nn_favs') || '[]')), shown = 100, selId = null;
+const per1M = v => { const n = parseFloat(v); return isNaN(n) ? 0 : n < 0 ? Infinity : n * 1e6; };
+const money = n => n === Infinity ? 'Varies' : n === 0 ? 'Free' : usdFmt(n);
+const cmpn = (a, b) => a === b ? 0 : a < b ? -1 : 1;
+const MAXSTEPS = [0,0.1,0.25,0.5,1,2,3,5,8,10,15,20,30,40,50,60,75,100,150,200,300,Infinity];
+const prov = m => m.id.split('/')[0];
+const caps = m => ({ tools:(m.supported_parameters||[]).includes('tools'), reason:(m.supported_parameters||[]).includes('reasoning') || !!m.reasoning, image:(m.architecture?.input_modalities||[]).includes('image'), long:m.context_length>=200000 });
+const variantOf = m => m.id.startsWith('~') ? 'alias' : m.id.includes(':') ? m.id.split(':').pop() : 'std';
+const isFree = m => variantOf(m) === 'free' || (per1M(m.pricing?.prompt) === 0 && per1M(m.pricing?.completion) === 0);
+const VLABEL = { free:'Free (:free)', batch:'Batch (:batch)', thinking:'Thinking (:thinking)', nitro:'Faster delivery (:nitro)', floor:'Cheapest provider (:floor)', online:'With web search (:online)', extended:'Extended context (:extended)', alias:'Always-latest aliases (~)' };
+const VWARN = {
+  free: 'Free models can come with real drawbacks. Your prompts and answers may be logged and used by the provider (for example to train models), so do not send private, client or financial data. They also tend to have strict rate limits, can be slow or unavailable, can disappear without notice, and may behave differently from the paid version. Not recommended for important tasks.',
+  batch: 'Batch versions are cheaper but answer asynchronously: results arrive later, not instantly. Good for big jobs that can wait, not for chat or tasks where someone is waiting.',
+  alias: 'Aliases (~) always point to the newest model of a family. The model behind them can change without you choosing it, so results may change between runs. Pin an exact version for tasks that must stay consistent.'
+};
+const PRESETS = { all:{}, everyday:{tools:1,max:5,sort:'new'}, docs:{tools:1,long:1,max:5,sort:'pin'}, master:{tools:1,reason:1,max:10,sort:'new'}, cheap:{tools:1,max:0.5,sort:'pin'}, hard:{tools:1,reason:1,max:100,sort:'new'} };
+function applyPreset() {
+  const p = PRESETS[$('#suit').value];
+  document.querySelectorAll('#fchips input').forEach(c => { if (c.dataset.f !== 'fav') c.checked = !!p[c.dataset.f]; });
+  const i = MAXSTEPS.indexOf(p.max); $('#fmax').value = i < 0 ? 21 : i; $('#fmaxv').textContent = i < 0 ? 'any' : usdFmt(p.max);
+  $('#fsort').value = p.sort || 'new'; shown = 100; render();
+}
+const CK = 'nn_models_cache';
+function readCache() { try { return JSON.parse(localStorage.getItem(CK)); } catch { return null; } }
+function diffModels(a, b) {
+  const old = new Map(a.map(m => [m.id, m])), cur = new Map(b.map(m => [m.id, m]));
+  const added = b.filter(m => !old.has(m.id)).length, removed = a.filter(m => !cur.has(m.id));
+  const price = b.filter(m => old.has(m.id) && (old.get(m.id).pricing?.prompt !== m.pricing?.prompt || old.get(m.id).pricing?.completion !== m.pricing?.completion)).length;
+  return { added, removed, price, lostFavs: removed.filter(m => favs.has(m.id)) };
+}
+function setModels(data, t, how) {
+  MODELS = data;
+  const pv = $('#fprov').value, vv = $('#fvar').value;
+  $('#fprov').innerHTML = '<option value="">All providers</option>';
+  [...new Set(MODELS.map(prov))].sort().forEach(p => { const o = document.createElement('option'); o.value = p; o.textContent = p; $('#fprov').append(o); });
+  $('#fprov').value = pv;
+  $('#fvar').innerHTML = '<option value="std">Standard only (recommended)</option><option value="all">All versions</option>';
+  [...new Set(MODELS.map(variantOf))].filter(v => v !== 'std').sort().forEach(v => { const o = document.createElement('option'); o.value = v; o.textContent = VLABEL[v] || ':' + v; $('#fvar').append(o); });
+  $('#fvar').value = [...$('#fvar').options].some(o => o.value === vv) ? vv : 'std';
+  $('#libsrc').textContent = how === 'offline' ? '(offline sample: could not reach OpenRouter)' : '(from OpenRouter)';
+  const when = t ? new Date(t).toLocaleString() : 'never';
+  $('#libupd').textContent = 'Last updated: ' + when + (usesOR() ? '. Refreshes automatically every day.' : '. Automatic daily refresh is off because OpenRouter is not enabled as a provider.');
+  $('#orupd').textContent = t ? 'Models updated ' + new Date(t).toLocaleDateString() : '';
+  render(); favUI();
+}
+const usesOR = () => $('#useor').checked;
+async function loadModels(force = false) {
+  const cache = readCache(), fresh = cache && Date.now() - cache.t < 864e5;
+  if (!force && (fresh || !usesOR())) { setModels(cache ? cache.data : FALLBACK, cache?.t, cache ? 'cached' : 'offline'); return; }
+  try {
+    const r = await fetch('https://openrouter.ai/api/v1/models'); if (!r.ok) throw 0;
+    const data = (await r.json()).data, now = Date.now(), prev = cache?.data || (MODELS !== FALLBACK ? MODELS : []);
+    try { localStorage.setItem(CK, JSON.stringify({ t:now, data })); } catch {}
+    setModels(data, now, 'live');
+    if (prev.length) {
+      const d = diffModels(prev, data), n = $('#libnote');
+      if (d.added || d.removed.length || d.price) {
+        n.hidden = false; n.className = 'note' + (d.lostFavs.length ? ' warn' : '');
+        n.textContent = 'Update: ' + d.added + ' new models, ' + d.price + ' price changes, ' + d.removed.length + ' removed.' + (d.lostFavs.length ? ' Warning: shortlisted model no longer available: ' + d.lostFavs.map(m => m.name).join(', ') + '. Tasks using it will need another model.' : '');
+      }
+    }
+  } catch { setModels(cache ? cache.data : FALLBACK, cache?.t, cache ? 'cached' : 'offline'); }
+}
+function filtered() {
+  const q = $('#q').value.toLowerCase().trim(), p = $('#fprov').value, mx = MAXSTEPS[$('#fmax').value], v = $('#fvar').value;
+  const on = {}; document.querySelectorAll('#fchips input').forEach(c => on[c.dataset.f] = c.checked);
+  let l = MODELS.filter(m => {
+    const c = caps(m), pin = per1M(m.pricing?.prompt);
+    return (!q || (m.name + ' ' + m.id + ' ' + (m.description||'')).toLowerCase().includes(q)) && (!p || prov(m) === p) && pin <= mx
+      && (v === 'all' || variantOf(m) === v) && (!on.fav || favs.has(m.id))
+      && ($('#suit').value === 'all' || v === 'free' || v === 'all' || !isFree(m))
+      && (!on.tools || c.tools) && (!on.reason || c.reason) && (!on.image || c.image) && (!on.long || c.long);
+  });
+  const s = $('#fsort').value, cmp = { new:(a,b)=>b.created-a.created, name:(a,b)=>a.name.localeCompare(b.name), pin:(a,b)=>cmpn(per1M(a.pricing?.prompt),per1M(b.pricing?.prompt)), pout:(a,b)=>cmpn(per1M(a.pricing?.completion),per1M(b.pricing?.completion)), ctx:(a,b)=>b.context_length-a.context_length };
+  l.sort(cmp[s]);
+  return l.sort((a, b) => favs.has(b.id) - favs.has(a.id));
+}
+function render() {
+  const l = filtered(), tb = $('#libtable tbody'); tb.innerHTML = '';
+  $('#libcount').textContent = l.length + ' of ' + MODELS.length + ' models' + (l.length > shown ? ', showing ' + shown : '');
+  l.slice(0, shown).forEach(m => {
+    const tr = document.createElement('tr'); tr.tabIndex = 0; if (m.id === selId) tr.className = 'sel';
+    const td0 = document.createElement('td'), st = document.createElement('button');
+    st.className = 'star'; st.textContent = '★'; st.setAttribute('aria-pressed', favs.has(m.id)); st.setAttribute('aria-label', 'Shortlist ' + m.name);
+    st.onclick = e => { e.stopPropagation(); toggleFav(m.id); st.setAttribute('aria-pressed', favs.has(m.id)); if ($('#fchips [data-f=fav]').checked) render(); if (selId === m.id) detail(m); };
+    td0.append(st);
+    const td1 = document.createElement('td'), b = document.createElement('b'), sm = document.createElement('small'), c = caps(m);
+    b.textContent = m.name; sm.textContent = m.id; sm.style.display = 'block'; sm.style.color = 'var(--mute)'; td1.append(b, sm);
+    [['tools',c.tools],['reasoning',c.reason],['images',c.image]].forEach(([t,v]) => { if (v) { const s = document.createElement('span'); s.className = 'mini'; s.textContent = t; td1.append(s); } });
+    [[isFree(m), 'free: may log your data'], [variantOf(m) === 'batch', 'batch: delayed answers'], [variantOf(m) === 'alias', 'alias: model can change']].forEach(([v, t]) => { if (v) { const s = document.createElement('span'); s.className = 'mini warn'; s.textContent = t; td1.append(s); } });
+    const priceCell = n => { const d = document.createElement('td'); d.textContent = money(n); if (n > 0 && n !== Infinity) { const s = document.createElement('small'); s.style.display = 'block'; s.style.color = 'var(--mute)'; s.textContent = locFmt(n); d.append(s); } return d; };
+    const ctx = document.createElement('td'); ctx.textContent = (m.context_length/1000).toFixed(0) + 'k';
+    const cells = [ctx, priceCell(per1M(m.pricing?.prompt)), priceCell(per1M(m.pricing?.completion))];
+    tr.append(td0, td1, ...cells); tr.onclick = () => { selId = m.id; document.querySelectorAll('#libtable tr.sel').forEach(x => x.classList.remove('sel')); tr.classList.add('sel'); detail(m); };
+    tr.onkeydown = e => { if (e.key === 'Enter') tr.click(); };
+    tb.append(tr);
+  });
+  $('#more').hidden = l.length <= shown;
+}
+function toggleFav(id) { favs.has(id) ? favs.delete(id) : favs.add(id); localStorage.setItem('nn_favs', JSON.stringify([...favs])); favUI(); }
+function favUI() {
+  $('#favcount').textContent = favs.size ? '★ ' + favs.size : '';
+  populateModelSelects();
+}
+function modelPrice(m) { const a = per1M(m.pricing?.prompt), b = per1M(m.pricing?.completion); return money(a) + ' in / ' + money(b) + ' out' + (a > 0 && a !== Infinity ? ' (' + locFmt(a) + ' / ' + locFmt(b) + ')' : ''); }
+function populateModelSelects() {
+  document.querySelectorAll('.modelsel').forEach(sel => {
+    const keep = sel.value;
+    sel.querySelectorAll('optgroup, option[value="__lib"], option[data-x]').forEach(o => o.remove());
+    [...sel.options].filter(o => o.textContent.startsWith('Choose exact')).forEach(o => o.remove());
+    if (sel.classList.contains('tier') && !sel.querySelector('option[value="auto"]')) { const a = document.createElement('option'); a.value = 'auto'; a.textContent = 'Auto (Nomad\'s own picks, you are told before it changes)'; sel.prepend(a); if (!keep) sel.value = 'auto'; }
+    const list = [...favs].map(id => MODELS.find(x => x.id === id)).filter(Boolean);
+    if (list.length) { const g = document.createElement('optgroup'); g.label = 'Your shortlist'; list.forEach(m => { const o = document.createElement('option'); o.value = m.id; o.textContent = m.name + ' · ' + money(per1M(m.pricing?.prompt)) + ' in'; g.append(o); }); sel.append(g); }
+    const l = document.createElement('option'); l.value = '__lib'; l.textContent = 'Browse the model library...'; sel.append(l);
+    if ([...sel.options].some(o => o.value === keep)) sel.value = keep;
+    if (sel.classList.contains('tier')) tierPrice(sel);
+  });
+}
+function tierPrice(sel) {
+  const td = sel.closest('tr').querySelector('.tierp'), m = MODELS.find(x => x.id === sel.value);
+  td.textContent = m ? modelPrice(m) : 'Chosen automatically';
+}
+function openLibrary() { go('settings'); document.querySelectorAll('.spane').forEach(p => p.hidden = p.id !== 's-library'); document.querySelectorAll('nav.sub button').forEach(x => x.setAttribute('aria-selected', x.dataset.s === 's-library')); }
+function detail(m) {
+  const d = $('#mdetail'); d.hidden = false; d.innerHTML = '';
+  const h = document.createElement('h3'); h.textContent = m.name; const fb = document.createElement('button'); fb.style.marginLeft = '10px';
+  fb.textContent = favs.has(m.id) ? '★ In shortlist (remove)' : '☆ Add to shortlist'; fb.onclick = () => { toggleFav(m.id); render(); detail(m); }; h.append(fb);
+  const p = document.createElement('p'); p.textContent = m.description || 'No description.';
+  const pin = per1M(m.pricing?.prompt), pout = per1M(m.pricing?.completion), run = (200000/1e6)*pin + (10000/1e6)*pout;
+  const g = document.createElement('div'); g.className = 'dgrid';
+  const add = (k, v) => { const x = document.createElement('div'), s = document.createElement('small'); s.textContent = k; x.append(s, document.createTextNode(v)); g.append(x); };
+  add('Price per 1M tokens (charged in USD)', modelPrice(m) + (m.pricing?.input_cache_read ? ' / cached in ' + money(per1M(m.pricing.input_cache_read)) : ''));
+  add('Example: Rule Watcher run (200k read, 10k written)', run === 0 ? 'Free' : run === Infinity ? 'Varies' : usdFmt(run) + ' (' + locFmt(run) + ')');
+  add('Context window', m.context_length.toLocaleString() + ' tokens');
+  add('Max answer length', m.top_provider?.max_completion_tokens ? m.top_provider.max_completion_tokens.toLocaleString() + ' tokens' : 'Not stated');
+  add('Understands', (m.architecture?.input_modalities || []).join(', ') || 'text');
+  add('Produces', (m.architecture?.output_modalities || []).join(', ') || 'text');
+  add('Reasoning levels', m.reasoning?.supported_efforts ? m.reasoning.supported_efforts.join(', ') + (m.reasoning.mandatory ? ' (always on)' : '') : (caps(m).reason ? 'supported' : 'none'));
+  add('Can use tools', caps(m).tools ? 'Yes' : 'No');
+  add('Added', new Date(m.created * 1000).toLocaleDateString());
+  add('Data note', m.top_provider?.is_moderated ? 'Provider moderates content' : 'Not moderated by provider');
+  const use = document.createElement('p'); use.append('Use for: ');
+  const setTier = (t, label) => { favs.add(m.id); localStorage.setItem('nn_favs', JSON.stringify([...favs])); favUI(); render();
+    const sel = t === 'Master AI' ? $('#mmodel') : document.querySelector('.tier[data-tier="' + t + '"]'); sel.value = m.id; if (sel.classList.contains('tier')) tierPrice(sel);
+    say('Done: ' + m.name + ' is now ' + label + ' (and added to your shortlist). Prototype only: nothing is saved yet.'); };
+  [['Master AI', 'the brain of the Master AI'], ['Fast', 'your Fast model'], ['Balanced', 'your Balanced model'], ['Best', 'your Best model']].forEach(([t, label]) => { const b = document.createElement('button'); b.textContent = t; b.style.marginRight = '6px'; b.onclick = () => setTier(t, label); use.append(b); });
+  const warns = [isFree(m) && VWARN.free, variantOf(m) === 'batch' && VWARN.batch, variantOf(m) === 'alias' && VWARN.alias].filter(Boolean);
+  const wn = document.createElement('div'); if (warns.length) { wn.className = 'note warn'; wn.textContent = 'Before you use this: ' + warns.join(' '); }
+  const w = document.createElement('small'); w.style.color = 'var(--mute)'; w.textContent = 'Prices and details come directly from OpenRouter and are refreshed daily. Nomad checks the price again before every run and applies your spending limits.';
+  d.append(h, p, wn, g, use, w);
+}
+function updVarWarn() { const v = $('#fvar').value, w = $('#varwarn'); w.hidden = !VWARN[v]; w.textContent = VWARN[v] ? 'Be aware: ' + VWARN[v] : ''; }
+['#q', '#fprov', '#fsort', '#fmax', '#fvar'].forEach(s => $(s).oninput = () => { shown = 100; if (s === '#fmax') $('#fmaxv').textContent = MAXSTEPS[$('#fmax').value] === Infinity ? 'any' : usdFmt(MAXSTEPS[$('#fmax').value]); updVarWarn(); render(); });
+document.querySelectorAll('#fchips input').forEach(c => c.onchange = () => { shown = 100; render(); });
+$('#suit').onchange = applyPreset;
+$('#more').onclick = () => { shown += 100; render(); };
+$('#refresh').onclick = () => loadModels(true);
+$('#useor').onchange = () => loadModels();
+$('#tolib').onclick = e => { e.preventDefault(); openLibrary(); };
+document.addEventListener('change', e => { const s = e.target;
+  if (s.classList.contains('modelsel') && s.value === '__lib') { s.value = s.querySelector('option:not([value="__lib"])').value; openLibrary(); }
+  else if (s.classList.contains('tier')) tierPrice(s); });
+setInterval(() => loadModels(), 36e5);
+// Task types: 5 categories with subcategories. Flags mark real-world consequences that always need approval.
+const FLAGS = { send:'sends messages to other people', publish:'publishes content', spend:'spends money', settings:'changes account or system settings', change:'changes records, files or code', delete:'deletes data' };
+const TYPES = [
+ { id:'research', name:'Research and information', preset:'docs', subs:[
+  ['Search the web for answers, sources, products, or services'], ['Summarize articles, reports, books, meeting notes, and long documents'], ['Compare information across multiple sources'],
+  ['Track topics, companies, competitors, or policy changes'], ['Compile facts into briefs, timelines, FAQs, or dossiers'], ['Find and extract specific details from documents'],
+  ['Translate text and explain unfamiliar terms'], ['Monitor selected websites or feeds for updates'], ['Organize research with links, tags, and citations'],
+  ['Draft questions for interviews, surveys, or expert consultations']] },
+ { id:'comm', name:'Communication and content', preset:'everyday', subs:[
+  ['Draft and revise emails, messages, letters, and announcements',['send']], ['Sort incoming messages and suggest replies',['send']], ['Prepare meeting agendas, follow-ups, and summaries',['send']],
+  ['Write reports, proposals, presentations, and documentation'], ['Create social posts, newsletters, product descriptions, and blog drafts',['publish']],
+  ['Adapt content for different audiences, formats, or reading levels'], ['Proofread for grammar, tone, and consistency'], ['Turn notes or recordings into structured documents'],
+  ['Generate ideas, outlines, titles, and scripts'], ['Translate or localize content'], ['Schedule drafts for review or publication',['publish']]] },
+ { id:'plan', name:'Planning and personal organization', preset:'everyday', subs:[
+  ['Maintain calendars and suggest meeting times',['send','change']], ['Create task lists, reminders, and project plans'], ['Break goals into steps, milestones, and deadlines'],
+  ['Track commitments and flag overdue tasks'], ['Prepare daily or weekly summaries'], ['Plan trips, meals, events, or study schedules',['spend']],
+  ['Find options that match a budget or set of preferences'], ['Organize files, notes, bookmarks, and contacts',['change','delete']], ['Build routines and checklists'],
+  ['Coordinate availability and logistics with other people',['send']], ['Help prioritize work based on deadlines and importance']] },
+ { id:'biz', name:'Business and workflow operations', preset:'everyday', subs:[
+  ['Enter, update, and validate data in business systems',['change']], ['Process invoices, receipts, forms, and expense records',['spend','change']],
+  ['Prepare customer-support responses and route complex cases',['send']], ['Update CRM records and draft sales follow-ups',['change','send']],
+  ['Generate routine reports from approved data'], ['Monitor inventory, orders, or service requests'], ['Run quality checks on documents, records, or workflows'],
+  ['Create tickets and route them to the right team',['send']], ['Draft job descriptions, onboarding materials, and internal guides'], ['Track project status and summarize blockers'],
+  ['Automate repetitive steps across apps',['change']], ['Gather information for procurement or vendor comparisons']] },
+ { id:'tech', name:'Software, data, and technical support', preset:'hard', subs:[
+  ['Explain code and answer questions about a codebase'], ['Draft, test, and revise code',['change']], ['Find likely causes of errors and suggest fixes'],
+  ['Generate unit tests, documentation, and code examples',['change']], ['Convert data between formats and clean datasets',['change']],
+  ['Create charts, summaries, and analyses from provided data'], ['Run approved database queries and explain results'], ['Monitor systems and summarize alerts'],
+  ['Help configure software and troubleshoot common issues',['settings']], ['Create prototypes, scripts, and internal tools',['change']],
+  ['Check accessibility, formatting, and consistency'], ['Review proposed changes and flag potential problems']] }
+];
+let chosen = new Set(['0:3', '0:7']);
+const flagsOf = keys => [...new Set([...keys].flatMap(k => { const [c, s] = k.split(':'); return TYPES[c].subs[s][1] || []; }))];
+const flagTags = fl => fl.map(f => { const s = document.createElement('span'); s.className = 'mini warn'; s.textContent = f === 'send' ? 'asks before sending' : f === 'publish' ? 'asks before publishing' : f === 'spend' ? 'asks before spending' : f === 'settings' ? 'asks before changing settings' : f === 'delete' ? 'asks before deleting' : 'asks before changing things'; return s; });
+function renderSubs() {
+  const ci = +$('#cat').value, box = $('#subs'); box.innerHTML = '';
+  TYPES[ci].subs.forEach(([t, fl], si) => {
+    const l = document.createElement('label'), c = document.createElement('input'), k = ci + ':' + si; c.type = 'checkbox'; c.checked = chosen.has(k);
+    c.onchange = () => { c.checked ? chosen.add(k) : chosen.delete(k); updateTypeNotes(); };
+    const sp = document.createElement('span'); sp.textContent = t; l.append(c, sp, ...flagTags(fl || [])); box.append(l);
+  });
+  updateTypeNotes();
+}
+function updateTypeNotes() {
+  const fl = flagsOf(chosen), n = $('#catnote'), ci = +$('#cat').value;
+  n.className = fl.length ? 'note warn' : 'note';
+  n.textContent = !chosen.size ? 'Pick at least one type so Nomad can suggest safe defaults.'
+    : fl.length ? 'This task can do things with real consequences: it ' + fl.map(f => FLAGS[f]).join(', ') + '. Nomad pauses for your approval before each of these.'
+    : 'Reading, researching and drafting only: nothing here has real-world consequences. Nomad still pauses and asks if a step turns out to need it (health and legal decisions always need a human).';
+  const label = $('#suit option[value="' + TYPES[ci].preset + '"]').textContent, m = $('#catmodel'); m.innerHTML = '';
+  m.append('Suggested models for "' + TYPES[ci].name + '": ' + label + '. ');
+  const b = document.createElement('button'); b.textContent = 'Show matching models'; b.onclick = () => { $('#suit').value = TYPES[ci].preset; applyPreset(); openLibrary(); }; m.append(b);
+  const s = $('#impsug'); s.innerHTML = '';
+  if (fl.length && !$('#imp').checked) {
+    s.append('Suggestion: because this task can act in the real world, mark it as important so it pauses and asks you at a spending limit. ');
+    const bb = document.createElement('button'); bb.textContent = 'Mark as important'; bb.onclick = () => { $('#imp').checked = true; $('#imp').onchange({ target: $('#imp') }); updateTypeNotes(); }; s.append(bb);
+  }
+}
+function renderTypeList() {
+  const box = $('#typelist'); box.innerHTML = '';
+  TYPES.forEach((t, ci) => {
+    const d = document.createElement('details'); d.className = 'tcat'; if (ci === 0) d.open = true;
+    const s = document.createElement('summary'); s.textContent = (ci + 1) + '. ' + t.name + ' (' + t.subs.length + ')'; d.append(s);
+    t.subs.forEach(([txt, fl], si) => { const b = document.createElement('button'); b.className = 'tsub'; b.append(txt + ' '); b.append(...flagTags(fl || [])); b.onclick = () => pickSub(ci, si); d.append(b); });
+    box.append(d);
+  });
+}
+function pickSub(ci, si) {
+  chosen = new Set([ci + ':' + si]); $('#cat').value = ci; renderSubs();
+  go('canvas'); $('#title').textContent = 'New assistant'; $('#sub').textContent = 'Type: ' + TYPES[ci].name + ' > ' + TYPES[ci].subs[si][0];
+  $('#flow').innerHTML = ''; built = false; $('#settings').hidden = false;
+  say('I want an assistant to: ' + TYPES[ci].subs[si][0].toLowerCase(), 'me');
+  setTimeout(() => say('Good choice. I filed it under "' + TYPES[ci].name + '" and suggested safe defaults on the right. Tell me the details in your own words: what exactly, how often, and where should the results go?'), 300);
+}
+TYPES.forEach((t, i) => { const o = document.createElement('option'); o.value = i; o.textContent = t.name; $('#cat').append(o); });
+$('#cat').onchange = renderSubs;
+
+// Paused tasks: notify, wait, then abort with a full report
+const fmtT = d => d.toLocaleString([], { weekday:'short', hour:'2-digit', minute:'2-digit' });
+function viaText() { return [$('#npush').checked && 'push notification', $('#nmail').checked && 'email'].filter(Boolean).join(' and '); }
+let pausedAt = new Date();
+function updatePaused() {
+  const h = +$('#wait').value, end = new Date(pausedAt.getTime() + h * 36e5);
+  $('#pleft').textContent = h + ' hours (until ' + fmtT(end) + '), then the task is aborted';
+  $('#pvia').textContent = viaText();
+}
+['#wait', '#npush', '#nmail'].forEach(s => $(s).addEventListener('change', e => {
+  if (!$('#npush').checked && !$('#nmail').checked) { e.target.checked = true; say('At least one way to reach you must stay on, otherwise a paused task could not ask you anything.'); }
+  updatePaused(); }));
+function abortReport() {
+  const h = +$('#wait').value, end = new Date(pausedAt.getTime() + h * 36e5), half = new Date(pausedAt.getTime() + h * 18e5), last = new Date(end.getTime() - 36e5);
+  const p = document.createElement('div'); p.className = 'panel'; p.id = 'abortrep';
+  p.innerHTML = '<h3>Aborted: Invoice Helper <span class="tag" style="color:var(--bad)">No reply in time</span></h3><dl class="rep">'
+   + '<dt>When</dt><dd>Paused ' + fmtT(pausedAt) + '. Aborted ' + fmtT(end) + ', after waiting ' + h + ' hours as you set.</dd>'
+   + '<dt>Why</dt><dd>The monthly limit of <span class="m" data-usd="2"></span> was reached while it was chasing overdue invoices (7 of 12 done).</dd>'
+   + '<dt>Logic</dt><dd>You marked this task as important, so instead of stopping it paused and asked you. Spending past a limit always needs your consent. We contacted you by ' + viaText()
+   + ' at ' + fmtT(pausedAt) + ', again at ' + fmtT(half) + ' and a last time at ' + fmtT(last) + '. There was no reply, so, as you configured, the task was aborted. Nothing was spent beyond the limit.</dd>'
+   + '<dt>Consequences</dt><dd>5 customers have not been reminded this week, so those payments may arrive later. The 7 reminders already approved were sent and stay valid. No data was changed or deleted and nothing needs undoing. The next scheduled run is Friday 16:00 and will start with the 5 open invoices.</dd>'
+   + '<dt>Your options</dt><dd><button class="primary">Run the remaining 5 now with <span class="m" data-usd="1"></span> extra</button> <button>Raise the monthly limit</button> <button data-go="why">Open the full log</button></dd></dl>';
+  return p;
+}
+$('#simabort').onclick = () => { $('#paused').hidden = true; $('#abortlist').prepend(abortReport()); renderMoney(); say('Invoice Helper was aborted after ' + $('#wait').value + ' hours without a reply. The full report is in your Inbox.'); };
+updatePaused();
+renderSubs();
+renderTypeList();
+applyPreset();
+loadFx();
+loadModels();
+preview();
+document.querySelectorAll('[data-go]').forEach(a => a.onclick = e => { e.preventDefault(); go(a.dataset.go); });
+document.querySelectorAll('.seg').forEach(g => g.onclick = e => { if (e.target.tagName === 'BUTTON') { g.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b === e.target)); } });
+const names = ['Low','Medium','High'];
+$('#reason').oninput = e => { $('#rv').textContent = names[e.target.value]; e.target.setAttribute('aria-valuetext', names[e.target.value]); };
+$('#spend').oninput = e => { $('#sv').dataset.usd = e.target.value; renderMoney(); };
+$('#dry').onclick = () => { const c = usdFmt(1.02) + ' (' + locFmt(1.02) + ')'; $('#dr').textContent = 'Test done: found 2 changes, cost ' + c + ', nothing sent. Looks right?'; say('Test finished. I found 2 changes using last month\'s pages and spent ' + c + '. Want to activate it?', 'ai', [['Activate', () => say('Activated. First run: 1 Dec, 09:00. You can see it in the Agenda.')], ['Change something', () => say('Sure, what should change?')]]); };
+// Secretary: drop files, classify, extract, confirm. Prototype uses simple pattern matching; the real app uses the Master AI with the same confirm step.
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));
+const MON = { jan:0, feb:1, mar:2, apr:3, may:4, mei:4, jun:5, jul:6, aug:7, sep:8, oct:9, okt:9, nov:10, dec:11 };
+const fmtD = d => d.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short', year:'numeric' });
+function findDates(s) {
+  const out = []; let m;
+  const r1 = /\b(\d{4})-(\d{2})-(\d{2})\b/g, r2 = /\b(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})\b/g, r3 = /\b(\d{1,2})\s+(jan|feb|mar|apr|may|mei|jun|jul|aug|sep|oct|okt|nov|dec)[a-z]*\.?\s+(\d{4})\b/gi;
+  while ((m = r1.exec(s))) out.push({ i:m.index, d:new Date(+m[1], +m[2] - 1, +m[3]) });
+  while ((m = r2.exec(s))) out.push({ i:m.index, d:new Date(+m[3], +m[2] - 1, +m[1]) });
+  while ((m = r3.exec(s))) out.push({ i:m.index, d:new Date(+m[3], MON[m[2].toLowerCase()], +m[1]) });
+  return out.filter(x => !isNaN(x.d)).sort((a, b) => a.i - b.i);
+}
+function parseNum(x) { x = x.replace(/[^\d.,]/g, ''); const c = x.lastIndexOf(','), p = x.lastIndexOf('.');
+  if (c > -1 && p > -1) x = c > p ? x.replace(/\./g, '').replace(',', '.') : x.replace(/,/g, ''); else if (c > -1) x = /,\d{2}$/.test(x) ? x.replace(',', '.') : x.replace(/,/g, ''); else if (/\.\d{3}$/.test(x)) x = x.replace(/\./g, '');
+  return parseFloat(x); }
+function findAmounts(s) { const out = []; const r = /(€|EUR|\$|USD)\s?(\d[\d.,]*)|(\d[\d.,]*)\s?(€|EUR)\b/gi; let m;
+  while ((m = r.exec(s))) { const v = parseNum(m[2] || m[3]); if (!isNaN(v)) out.push({ i:m.index, v, ctx:s.slice(Math.max(0, m.index - 40), m.index).toLowerCase(), cur:/\$|USD/i.test(m[1] || '') ? '$' : '€' }); } return out; }
+const eur = (v, c) => c + v.toLocaleString('en-GB', { minimumFractionDigits:2, maximumFractionDigits:2 });
+const SAMPLES = {
+  bill: 'Invoice 2026-0412\nFrom: Bright Energy BV\nElectricity, October 2026\nTotal amount due: €142,50\nDue date: 20-11-2026\nIBAN NL12 BANK 0123 4567 89',
+  appt: 'Subject: Appointment confirmation\nFrom: Dental Clinic De Vries\nYour appointment is on 12-11-2026 at 14:30 at Main Street 5. Please cancel at least 24 hours in advance.',
+  gov: 'From: Tax Authority\nSubject: Change to the small-business VAT scheme\nFrom 1 January 2027 the turnover limit for the small-business VAT exemption changes to €25.000. If your turnover exceeds this limit you must register for VAT before 1 February 2027. Late registration may lead to a fine of up to €5.000.'
+};
+function kindOf(name, text) { const s = (name + ' ' + text).toLowerCase();
+  if (/belasting|\btax\b|gemeente|municipal|government|overheid|ministry|\bkvk\b|\birs\b|hmrc|\bvat\b|\bbtw\b|authority/.test(s)) return 'gov';
+  if (/appointment|afspraak|meeting|reservation|interview|uitnodiging/.test(s)) return 'appt';
+  if (/invoice|factuur|\bbill\b|amount due|te betalen|payment due|iban|total/.test(s)) return 'bill';
+  return 'unknown'; }
+function analyse(name, text, simulated) {
+  const kind = kindOf(name, text), line = k => { const m = text.match(new RegExp('^\\s*' + k + ':\\s*(.+)$', 'mi')); return m && m[1].trim(); };
+  const it = { name, kind, simulated, text, from:line('from') || name.replace(/\.[a-z0-9]+$/i, ''), subject:line('subject') || line('invoice') || (/^[^:\n]{3,60}$/.test(text.split('\n')[0]) ? text.split('\n')[0].trim() : name), dates:findDates(text), amounts:findAmounts(text), done:false };
+  const dd = it.dates.find(x => /due|uiterlijk|before|vervaldatum|deadline|voor/i.test(text.slice(Math.max(0, x.i - 40), x.i))) || it.dates[0];
+  it.due = dd && dd.d; const am = it.amounts.find(x => /total|totaal|amount|due|te betalen/.test(x.ctx)) || it.amounts.sort((a, b) => b.v - a.v)[0]; it.amount = am;
+  const tm = text.match(/\b(\d{1,2}):(\d{2})\b/); if (tm && it.due) { it.due = new Date(it.due); it.due.setHours(+tm[1], +tm[2]); it.time = tm[0]; }
+  const body = text.replace(/^\s*(from|subject|invoice)\s*:.*$/gmi, '').replace(/^Invoice \S+\s*$/gmi, '');
+  const sents = body.replace(/\n+/g, ' ').split(/(?<=[.!?])\s+/).map(s => s.trim()).filter(Boolean);
+  it.change = sents.find(s => /change|changes|wijzig|from \d|vanaf|new rule|threshold|limit/i.test(s)); it.todo = sents.find(s => /must|moet|register|before|uiterlijk|required|verplicht/i.test(s)); it.risk = sents.find(s => /fine|boete|penalt|late/i.test(s));
+  it.summary = sents.filter(s => !/^(from|subject|invoice)\b/i.test(s)).slice(0, 2).join(' ');
+  return it;
+}
+const secItems = [], bills = [];
+function secLog(t) { $('#lognone').hidden = true; const li = document.createElement('li'); li.textContent = new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' }) + ' ' + t; $('#seclog').prepend(li); }
+function remindDate(due) { const d = new Date(due); d.setDate(d.getDate() - +$('#remdays').value); return d; }
+function renderBills() {
+  const t = $('#billtab'); t.querySelectorAll('tr:not(:first-child)').forEach(r => r.remove()); $('#billnone').hidden = bills.length > 0;
+  const open = bills.filter(b => !b.paid).reduce((s, b) => s + b.amount.v, 0); $('#billsum').textContent = bills.length ? 'Open total ' + eur(open, bills[0].amount.cur) : '';
+  bills.forEach(b => { const tr = t.insertRow(); [b.from, eur(b.amount.v, b.amount.cur), fmtD(b.due), b.paid ? 'Done' : 'On ' + fmtD(b.remind)].forEach(x => tr.insertCell().textContent = x);
+    const c = tr.insertCell(), btn = document.createElement('button'); btn.textContent = b.paid ? 'Paid' : 'I paid this'; btn.disabled = b.paid; btn.title = 'Nomad never pays for you. Tell it when you have paid.';
+    btn.onclick = () => { b.paid = true; secLog('You marked the bill from ' + b.from + ' (' + eur(b.amount.v, b.amount.cur) + ') as paid. Reminder cancelled.'); renderBills(); }; c.append(btn); }); }
+function card(it) {
+  const d = document.createElement('div'); d.className = 'rescard'; const kinds = { bill:'Bill', appt:'Appointment', gov:'Official letter', unknown:'Unknown' };
+  const rows = [['What it is', it.subject], ['From', it.from]]; let acts = [];
+  if (it.kind === 'bill') { rows.push(['Amount', it.amount ? eur(it.amount.v, it.amount.cur) : 'Not found: please check the document']); rows.push(['Due date', it.due ? fmtD(it.due) : 'Not found: please check the document']);
+    if (it.amount && it.due) rows.push(['I will remind you', 'On ' + fmtD(remindDate(it.due)) + ' (' + $('#remdays').value + ' days before). Paying always stays with you.']);
+    acts = [['Confirm and log', () => { if (!it.amount || !it.due) { say('I could not read the amount or the date. Please paste the text or tell me the values.'); return; } bills.push({ from:it.from, amount:it.amount, due:it.due, remind:remindDate(it.due) }); secLog('Bill from ' + it.from + ' ' + eur(it.amount.v, it.amount.cur) + ', due ' + fmtD(it.due) + ' confirmed. Reminder set for ' + fmtD(remindDate(it.due)) + '.'); renderBills(); fin(); }]]; }
+  else if (it.kind === 'appt') { rows.push(['When', it.due ? fmtD(it.due) + (it.time ? ' at ' + it.time : '') : 'Not found: please check the document']); const m = it.text.match(/\bat\s+([A-Z][\w ]*\d*)/); if (m) rows.push(['Where', m[1].replace(/\.$/, '')]);
+    acts = [['Add to my agenda', () => { if (!it.due) { say('I could not find a date. Please tell me when it is.'); return; } const tr = $('#agtable').insertRow(); [fmtD(it.due) + (it.time ? ' ' + it.time : ''), 'Secretary', it.subject, 'Appointment', '-'].forEach(x => tr.insertCell().textContent = x); secLog('Appointment "' + it.subject + '" on ' + fmtD(it.due) + ' added to the agenda after your confirmation.'); fin(); }]]; }
+  else if (it.kind === 'gov') { rows.push(['Summary', it.summary || '-']); if (it.change) rows.push(['Rule change', it.change]); if (it.todo) rows.push(['What you must do', it.todo]); if (it.risk) rows.push(['Possible consequence', it.risk]);
+    if (it.due) rows.push(['Key date', fmtD(it.due)]);
+    rows.push(['What it means for you', 'If your turnover stays under the new limit you can keep the exemption; if it goes over, registering on time avoids the fine. Based on your profile and may be imperfect, so check the quoted lines.']);
+    acts = [['Save report' + (it.due ? ' and set a reminder' : ''), () => { secLog('Report on "' + it.subject + '" from ' + it.from + ' saved.' + (it.due ? ' Deadline reminder set for ' + fmtD(remindDate(it.due)) + '.' : '')); fin(); }]]; }
+  else rows.push(['Hmm', 'I could not tell what this is. Tell me (bill, appointment or official letter) and I will file it.']);
+  d.innerHTML = '<h3>' + esc(it.name) + ' <span class="badge">' + kinds[it.kind] + '</span>' + (it.simulated ? ' <span class="badge pend">Example reading</span>' : '') + '</h3><dl>' + rows.map(r => '<dt>' + esc(r[0]) + '</dt><dd>' + (r[0] === 'What it means for you' ? '<span class="tag expl">AI</span> ' : '') + esc(r[1]) + '</dd>').join('') + '</dl>';
+  if (it.kind === 'gov') d.insertAdjacentHTML('beforeend', '<small><span class="tag fact">Recorded fact</span> The lines above are quoted from the letter. The "what it means" line is the AI\'s own reading.</small>');
+  const a = document.createElement('div'); a.className = 'acts'; const fin = () => { d.classList.add('done'); a.innerHTML = '<span class="badge done">Confirmed and logged</span>'; };
+  acts.forEach(([l, fn]) => { const b = document.createElement('button'); b.className = 'primary'; b.textContent = l; b.onclick = fn; a.append(b); });
+  const ig = document.createElement('button'); ig.textContent = it.kind === 'unknown' ? 'Tell me what it is...' : 'Not right? Ignore'; ig.onclick = () => { if (it.kind === 'unknown') say('What is "' + it.name + '"? Say bill, appointment or official letter and I will file it.'); else { d.remove(); secLog('You ignored "' + it.name + '". Nothing was changed.'); } }; a.append(ig);
+  d.append(a); return d;
+}
+function handleDoc(name, text, simulated) { const it = analyse(name, text, simulated); secItems.push(it); $('#secres').prepend(card(it)); secLog('Received "' + name + '", read as ' + it.kind + '. Waiting for your confirmation.'); }
+async function takeFiles(files) {
+  for (const f of files) {
+    if (/^text\/|\.(txt|eml|csv|md|html?)$/i.test(f.type + f.name)) handleDoc(f.name, (await f.text()).slice(0, 20000), false);
+    else { const k = kindOf(f.name, ''); handleDoc(f.name, SAMPLES[k] || '', true); }
+  }
+  say('I read ' + files.length + ' document' + (files.length > 1 ? 's' : '') + '. Please check them in the Secretary view and confirm what is right.');
+}
+const dz = $('#drop');
+dz.onclick = () => $('#filein').click(); dz.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); $('#filein').click(); } };
+$('#filein').onchange = e => { takeFiles([...e.target.files]); e.target.value = ''; };
+dz.ondragover = e => { e.preventDefault(); dz.classList.add('over'); }; dz.ondragleave = () => dz.classList.remove('over');
+dz.ondrop = e => { e.preventDefault(); dz.classList.remove('over'); takeFiles([...e.dataTransfer.files]); };
+['dragover', 'drop'].forEach(ev => window.addEventListener(ev, e => { if (e.target !== dz && !dz.contains(e.target) && e.dataTransfer && [...(e.dataTransfer.types || [])].includes('Files')) e.preventDefault(); }));
+$('#pastego').onclick = () => { const v = $('#pastein').value.trim(); if (v) { handleDoc('Pasted text', v, false); $('#pastein').value = ''; } };
+document.querySelectorAll('[data-ex]').forEach(b => b.onclick = () => handleDoc({ bill:'electricity-bill.txt', appt:'dentist-appointment.eml', gov:'tax-authority-letter.txt' }[b.dataset.ex], SAMPLES[b.dataset.ex], false));
+// Customizable menu: modules can be switched on or off in Settings (Overview and Settings stay)
+const NAV0 = [
+  { id:'overview', name:'Overview', on:true, locked:true }, { id:'agents', name:'Agents', on:true }, { id:'secretary', name:'Secretary', on:true, mod:true },
+  { id:'notes', name:'Ideas', on:true, mod:true }, { id:'finances', name:'Finances', on:true, mod:true }, { id:'coder', name:'Coder helper', on:false, mod:true }, { id:'designer', name:'Designer', on:true, mod:true }, { id:'types', name:'Task types', on:true },
+  { id:'agenda', name:'Agenda', on:true }, { id:'inbox', name:'Activity', on:true, badge:'1' }, { id:'why', name:'Why log', on:true }, { id:'tools', name:'Tools', on:true },
+  { id:'settings', name:'Settings', on:true, locked:true }
+];
+const NALIAS = { agents:['agents'], secretary:['secretary'], finances:['finances', 'finance'], notes:['ideas', 'idea inbox'], coder:['coder helper', 'coding helper', 'coder'], designer:['designer', 'design'], types:['task types'], agenda:['agenda'], inbox:['activity', 'inbox'], why:['why log'], tools:['tools'] };
+let nav; try { nav = JSON.parse(localStorage.getItem('nn_side')); } catch (e) {}
+const defNav = () => NAV0.map(n => ({ id:n.id, on:n.on }));
+if (!Array.isArray(nav)) nav = defNav();
+nav = nav.filter(n => NAV0.some(x => x.id === n.id));
+NAV0.forEach(x => { if (!nav.some(n => n.id === x.id)) nav.push({ id:x.id, on:x.on }); });
+NAV0.filter(x => x.locked).forEach(x => nav.find(n => n.id === x.id).on = true);
+const saveNav = () => { try { localStorage.setItem('nn_side', JSON.stringify(nav)); } catch (e) {} };
+function navChanged() { saveNav(); renderNav(); const n = nav.find(x => x.id === cur); if (n && !n.on) go('overview'); }
+function renderNav() {
+  const box = $('#sidenav'); box.innerHTML = '';
+  nav.filter(n => n.on).forEach(n => { const d = NAV0.find(x => x.id === n.id), b = document.createElement('button'); b.className = 'nv'; b.dataset.v = n.id; b.textContent = d.name;
+    if (d.badge) { const s = document.createElement('span'); s.className = 'badge pend'; s.textContent = d.badge; b.append(s); }
+    if (n.id === cur) b.setAttribute('aria-current', 'page'); box.append(b); });
+  const rows = $('#siderows'); rows.innerHTML = '';
+  nav.forEach((n, i) => { const d = NAV0.find(x => x.id === n.id), r = document.createElement('div'); r.className = 'row cust'; r.style.cssText = 'border:0;padding:4px 0;margin:0';
+    r.innerHTML = '<label><input type="checkbox"' + (n.on ? ' checked' : '') + (d.locked ? ' disabled' : '') + '> ' + d.name + (d.locked ? ' (always on)' : d.mod ? ' <span class="mini">module</span>' : '') + '</label><button aria-label="Move ' + d.name + ' up">&uarr;</button><button aria-label="Move ' + d.name + ' down">&darr;</button>';
+    const [c, up, dn] = [r.querySelector('input'), ...r.querySelectorAll('button')];
+    c.onchange = () => { n.on = c.checked; navChanged(); };
+    up.onclick = () => { if (i) { [nav[i - 1], nav[i]] = [nav[i], nav[i - 1]]; navChanged(); } };
+    dn.onclick = () => { if (i < nav.length - 1) { [nav[i + 1], nav[i]] = [nav[i], nav[i + 1]]; navChanged(); } };
+    rows.append(r); });
+}
+$('#sidereset').onclick = () => { nav = defNav(); navChanged(); };
+function openModule(id) { const n = nav.find(x => x.id === id); if (n && !n.on) { n.on = true; navChanged(); say('I switched on ' + NAV0.find(x => x.id === id).name + '. You can turn it off again under Settings, Menu & modules.'); } go(id); }
+function menuIntent(raw) {
+  const t = raw.toLowerCase(), word = /\b(menu|sidebar|module|modules)\b/.test(t), mod = /\b(coder|coding helper|designer)\b/.test(t);
+  const hide = /\b(hide|remove|turn off|disable|switch off|get rid of)\b/.test(t), show = /\b(show|add|enable|turn on|activate|switch on|bring back)\b/.test(t);
+  if (!(word || mod) || !(hide || show)) return false;
+  say(raw, 'me');
+  const ids = Object.keys(NALIAS).filter(k => NALIAS[k].some(a => t.includes(a)));
+  if (!ids.length) { say('Which menu items? For example: "hide the secretary from the menu" or "turn on the coder helper".'); return true; }
+  const snap = JSON.stringify(nav), msgs = [];
+  ids.forEach(id => { const n = nav.find(x => x.id === id), d = NAV0.find(x => x.id === id); n.on = show && !hide; msgs.push((n.on ? 'Showing ' : 'Hid ') + d.name + '.'); });
+  navChanged();
+  say('Done. ' + msgs.join(' ') + ' Overview and Settings always stay.', 'ai', [['Undo', () => { nav = JSON.parse(snap); navChanged(); say('Undone.'); }]]);
+  return true;
+}
+
+// Coder helper: quick idea capture, design questions, ready-to-paste prompt
+let ideas; try { ideas = JSON.parse(localStorage.getItem('nn_ideas')); } catch (e) {}
+if (!Array.isArray(ideas)) ideas = [];
+const saveIdeas = () => { try { localStorage.setItem('nn_ideas', JSON.stringify(ideas)); } catch (e) {} };
+function getBrand() { try { return JSON.parse(localStorage.getItem('nn_brand')); } catch (e) { return null; } }
+function addIdea(text) { const it = { id:String(Date.now()) + Math.random(), text:text.trim(), at:new Date().toLocaleDateString('en-GB', { day:'numeric', month:'short' }), prompt:'' }; ideas.unshift(it); saveIdeas(); renderIdeas(); return it; }
+function renderIdeas() {
+  const box = $('#ideas'); box.innerHTML = ''; $('#ideanone').hidden = ideas.length > 0; $('#ideacount').textContent = ideas.length || '';
+  ideas.forEach(it => { const d = document.createElement('div'); d.className = 'idea'; const p = document.createElement('p'); p.textContent = it.text; const m = document.createElement('small'); m.style.color = 'var(--mute)'; m.textContent = it.at + (it.prompt ? ' \u00b7 prompt ready' : '');
+    const a = document.createElement('div'); a.style.marginTop = '6px';
+    const go1 = document.createElement('button'); go1.className = 'primary'; go1.textContent = it.prompt ? 'Reopen' : 'Analyse'; go1.onclick = () => it.prompt ? (cw = { it, qs:qsFor(it.text), i:0, a:it.answers || {}, done:true }, showPrompt()) : ideaAnalyse(it);
+    const del = document.createElement('button'); del.textContent = 'Delete'; del.onclick = () => { if (del.dataset.sure) { ideas = ideas.filter(x => x !== it); saveIdeas(); renderIdeas(); } else { del.dataset.sure = 1; del.textContent = 'Really delete?'; } };
+    a.append(go1, ' ', del); d.append(p, m, a); box.append(d); });
+}
+function qsFor(text) {
+  const t = text.toLowerCase(), type = /\b(app|ios|android|phone|mobile)\b/.test(t) ? 'mobile app' : /\b(website|site|web|webshop|shop|landing)\b/.test(t) ? 'website' : /\b(script|automat|bot|cli|scraper|plugin|extension)\b/.test(t) ? 'script or tool' : '';
+  const qs = [{ k:'who', q:'Who is this for, and what problem does it solve for them?', ph:'e.g. neighbours who rarely need a drill but want to borrow one' }];
+  if (!type) qs.push({ k:'type', q:'What are you building?', choices:['Website', 'Mobile app', 'Desktop app', 'Script or automation', 'Not sure'] });
+  qs.push({ k:'must', q:'What are the 3 most important things it must do in the first version?' }, { k:'later', q:'What should it NOT do yet? (keeps the first version small)' });
+  if (type !== 'script or tool') qs.push({ k:'look', q:'How should it look and feel?', choices:(getBrand() ? ['Use my saved Designer baseline'] : []).concat(['Simple and clean', 'Playful', 'Professional']) });
+  qs.push({ k:'data', q:'Does it need logins, personal data or payments?', choices:['No', 'Logins only', 'Personal data', 'Payments', 'Not sure'] },
+    { k:'tech', q:'Any technology or existing project to build on? Leave empty and I recommend the simplest option.' }, { k:'done', q:'How will you know it works? Describe one real example.' });
+  qs.type = type; return qs;
+}
+let cw = null;
+function ideaAnalyse(it) { cw = { it, qs:qsFor(it.text), i:0, a:it.answers || {}, done:false }; showQ(); }
+function showQ() {
+  const w = $('#cwork'), { it, qs, i } = cw, q = qs[i]; let pick = '';
+  w.innerHTML = ''; const h = document.createElement('h3'); h.textContent = 'Analysing: ' + it.text.slice(0, 60) + (it.text.length > 60 ? '...' : ''); w.append(h);
+  const intro = document.createElement('small'); intro.style.color = 'var(--mute)'; intro.textContent = (qs.type ? 'I read this as a ' + qs.type + ' idea. ' : '') + 'Question ' + (i + 1) + ' of ' + qs.length; w.append(intro);
+  const box = document.createElement('div'); box.className = 'qa'; const qq = document.createElement('div'); qq.className = 'q'; qq.textContent = q.q; box.append(qq);
+  const prev = cw.a[q.k] || '';
+  if (q.choices) { const row = document.createElement('div'); row.className = 'chips'; row.setAttribute('role', 'group');
+    q.choices.forEach(c => { const b = document.createElement('button'); b.textContent = c; b.setAttribute('aria-pressed', 'false'); b.onclick = () => { pick = pick === c ? '' : c; row.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x.textContent === pick)); }; row.append(b); }); box.append(row); }
+  const ta = document.createElement('textarea'); ta.className = 'inp'; ta.rows = 2; ta.style.marginTop = '8px'; ta.setAttribute('aria-label', 'Your answer'); ta.placeholder = q.ph || (q.choices ? 'Add detail (optional)' : 'Your answer'); ta.value = prev; box.append(ta); w.append(box);
+  const next = (decide) => { cw.a[q.k] = decide ? '' : [pick, ta.value.trim()].filter(Boolean).join(': '); if (i + 1 < qs.length) { cw.i++; showQ(); } else { cw.done = true; showPrompt(); } };
+  const nb = document.createElement('button'); nb.className = 'primary'; nb.textContent = i + 1 < qs.length ? 'Next' : 'Write the prompt'; nb.onclick = () => next(false);
+  const db = document.createElement('button'); db.textContent = 'You decide'; db.onclick = () => next(true);
+  const bb = document.createElement('button'); bb.textContent = 'Back'; bb.disabled = i === 0; bb.onclick = () => { cw.i--; showQ(); };
+  w.append(bb, ' ', db, ' ', nb); ta.focus();
+}
+function buildPrompt() {
+  const { it, qs, a } = cw, T = $('#ctarget').value, b = getBrand(), dec = '(not specified: make the simplest sensible choice and tell me what you chose)';
+  const v = k => a[k] || dec, title = it.text.split(/\s+/).slice(0, 8).join(' ');
+  const look = /baseline/i.test(a.look || '') && b ? 'Follow my brand baseline: name "' + b.name + '", tagline "' + b.tag + '", colours main ' + b.c1 + ', second ' + b.c2 + ', accent ' + b.c3 + ', background ' + b.c4 + ', headline font ' + b.font + '. Keep contrast readable.' : v('look');
+  const head = T.startsWith('Kilo') ? 'Use Architect mode first to plan, then switch to Code mode to implement.\n\n' : T.startsWith('GitHub') ? 'Use Agent mode in Copilot Chat.\n\n' : '';
+  return head + '# Task: ' + title + '\n\n## The idea (in the owner\'s words)\n' + it.text + '\n\n## Audience and problem\n' + v('who') + '\n\n## What to build\n' + (qs.type || v('type')) + '\n\n## Must have in version 1\n' + v('must') + '\n\n## Out of scope for version 1\n' + v('later') + '\n\n## Look and feel\n' + (qs.type === 'script or tool' ? 'Not applicable (no visual interface).' : look) + '\n\n## Data, privacy and security\n' + v('data') + '\n\n## Technology\n' + (a.tech || 'Recommend the simplest option for a small project, explain why in two sentences, and wait for my OK.') + '\n\n## Done means\n' + v('done') +
+    '\n\n## How to work\n1. First restate the goal in your own words and list your assumptions. Ask me about anything unclear before writing code.\n2. Propose a short plan and the file structure. Wait for my OK.\n3. Work in small steps on a new git branch. Commit after each working step.\n4. Add simple tests for the must-haves and run them.\n5. Do not delete files, run destructive commands, install packages or send data anywhere without asking me first.\n6. Never hard-code secrets. Use environment variables and a .env.example file.\n7. At the end, summarise what changed and how to run it.';
+}
+function showPrompt() {
+  const w = $('#cwork'), p = buildPrompt(); cw.it.prompt = p; cw.it.answers = cw.a; saveIdeas(); renderIdeas();
+  w.innerHTML = '<h3>Your prompt is ready <span class="badge done">For ' + esc($('#ctarget').value) + '</span></h3><small style="color:var(--mute)">Copy it and paste it into your coding AI. Read it first: it is plain text and you can edit it.</small>';
+  const pre = document.createElement('pre'); pre.className = 'prompt'; pre.id = 'cprompt'; pre.tabIndex = 0; pre.textContent = p; w.append(pre);
+  const st = document.createElement('span'); st.setAttribute('role', 'status'); st.style.marginLeft = '8px';
+  const cp = document.createElement('button'); cp.className = 'primary'; cp.id = 'ccopy'; cp.textContent = 'Copy prompt';
+  cp.onclick = async () => { try { await navigator.clipboard.writeText(p); } catch (e) { const r = document.createRange(); r.selectNodeContents(pre); const s = getSelection(); s.removeAllRanges(); s.addRange(r); document.execCommand('copy'); } st.textContent = 'Copied. Paste it into ' + $('#ctarget').value + '.'; };
+  const ch = document.createElement('button'); ch.textContent = 'Change my answers'; ch.onclick = () => { cw.i = 0; cw.done = false; showQ(); };
+  w.append(cp, ' ', ch, st);
+  const n = document.createElement('p'); n.className = 'note'; n.textContent = 'Nothing is sent anywhere. In the full app a connector can open VS Code for you, vetted like every other tool.'; w.append(n);
+}
+$('#ideasave').onclick = () => { const v = $('#idea').value.trim(); if (v) { addIdea(v); $('#idea').value = ''; } };
+$('#ideago').onclick = () => { const v = $('#idea').value.trim(); if (v) { const it = addIdea(v); $('#idea').value = ''; ideaAnalyse(it); } };
+$('#ctarget').onchange = () => { if (cw && cw.done) showPrompt(); };
+renderIdeas();
+
+// Designer: brand baseline and sketches
+const MOODS = { Calm:['#3f7f8c', '#cfe5e1', '#e9a66b', '#f6f9f8', "'Segoe UI', system-ui, sans-serif"], Bold:['#d7263d', '#1b1b3a', '#ffbe0b', '#ffffff', "'Trebuchet MS', sans-serif"], Playful:['#7c5cff', '#ffd166', '#ef476f', '#fff8ec', "'Trebuchet MS', sans-serif"], Trustworthy:['#1d4e89', '#a9c5e8', '#2a9d8f', '#f5f8fc', "'Segoe UI', system-ui, sans-serif"], Premium:['#1a1a1a', '#c9a54c', '#7a1f3d', '#faf8f3', 'Georgia, serif'] };
+const BF = { name:'#bname', tag:'#btag', c1:'#c1', c2:'#c2', c3:'#c3', c4:'#c4', font:'#bfont', areas:'#bareas' };
+const curBrand = () => { const o = {}; for (const k in BF) o[k] = $(BF[k]).value; o.mood = $('#bmood').value; return o; };
+const lum = h => { const [r, g, b] = [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16) / 255).map(c => c <= .03928 ? c / 12.92 : Math.pow((c + .055) / 1.055, 2.4)); return .2126 * r + .7152 * g + .0722 * b; };
+const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + .05) / (Math.min(x, y) + .05); };
+const ink = h => lum(h) > .4 ? '#1b1b1b' : '#ffffff';
+const wrap = (s, n) => { const out = []; let line = ''; String(s).split(/\s+/).forEach(w => { if ((line + ' ' + w).trim().length > n) { out.push(line); line = w; } else line = (line + ' ' + w).trim(); }); if (line) out.push(line); return out; };
+const tsp = (lines, x, dy) => lines.map((l, i) => '<tspan x="' + x + '" dy="' + (i ? dy : 0) + '">' + esc(l) + '</tspan>').join('');
+const inits = n => n.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('') || '?';
+const svg = (w, h, body) => '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + w + ' ' + h + '" role="img" width="' + w + '">' + body + '</svg>';
+const mark = (b, x, y, s) => '<g transform="translate(' + x + ',' + y + ')"><rect width="' + s + '" height="' + s + '" rx="' + s * .22 + '" fill="' + b.c1 + '"/><text x="' + s / 2 + '" y="' + s * .66 + '" text-anchor="middle" font-size="' + s * .48 + '" font-weight="700" fill="' + ink(b.c1) + '" font-family="' + esc(b.font) + '">' + esc(inits(b.name)) + '</text><circle cx="' + s * .9 + '" cy="' + s * .1 + '" r="' + s * .1 + '" fill="' + b.c3 + '"/></g>';
+const seed = s => { let h = 7; for (const c of s) h = (h * 31 + c.charCodeAt(0)) % 9973; return h; };
+const PV = {
+  id: b => svg(640, 360, '<rect width="640" height="360" fill="' + b.c4 + '"/>' + mark(b, 40, 40, 110) + '<text x="175" y="95" font-size="34" font-weight="700" fill="' + b.c1 + '" font-family="' + esc(b.font) + '">' + esc(b.name) + '</text><text x="175" y="128" font-size="16" fill="#555" font-family="' + esc(b.font) + '">' + esc(b.tag) + '</text>'
+    + [['c1', 'Main'], ['c2', 'Second'], ['c3', 'Accent'], ['c4', 'Background']].map((c, i) => '<rect x="' + (40 + i * 145) + '" y="190" width="130" height="80" rx="10" fill="' + b[c[0]] + '" stroke="#0002"/><text x="' + (50 + i * 145) + '" y="290" font-size="12" fill="#333" font-family="sans-serif">' + c[1] + ' ' + b[c[0]] + '</text>').join('')
+    + '<text x="40" y="340" font-size="40" fill="' + b.c1 + '" font-family="' + esc(b.font) + '">Aa</text><text x="110" y="338" font-size="13" fill="#555" font-family="sans-serif">Headline font</text>'),
+  social: b => svg(660, 240, '<rect x="10" y="20" width="200" height="200" rx="12" fill="' + b.c1 + '"/><text x="30" y="80" font-size="22" font-weight="700" fill="' + ink(b.c1) + '" font-family="' + esc(b.font) + '">' + tsp(wrap(b.name, 12), 30, 26) + '</text><text x="30" y="140" font-size="12" fill="' + ink(b.c1) + '" font-family="sans-serif">' + tsp(wrap(b.tag, 26), 30, 16) + '</text>' + mark(b, 30, 170, 30)
+    + '<rect x="230" y="20" width="200" height="200" rx="12" fill="' + b.c4 + '" stroke="#0002"/><circle cx="330" cy="90" r="50" fill="' + b.c3 + '"/><text x="330" y="175" text-anchor="middle" font-size="20" font-weight="700" fill="' + b.c1 + '" font-family="' + esc(b.font) + '">New this week</text>' + mark(b, 250, 180, 30)
+    + '<rect x="450" y="20" width="200" height="200" rx="12" fill="' + b.c2 + '"/><text x="470" y="90" font-size="20" fill="' + ink(b.c2) + '" font-family="' + esc(b.font) + '">' + tsp(wrap('\u201c' + b.tag + '\u201d', 14), 470, 26) + '</text>' + mark(b, 470, 180, 30)),
+  web: b => svg(640, 400, '<rect x="10" y="10" width="620" height="380" rx="10" fill="' + b.c4 + '" stroke="#0003"/>' + mark(b, 30, 22, 36) + '<text x="76" y="46" font-size="16" font-weight="700" fill="' + b.c1 + '" font-family="' + esc(b.font) + '">' + esc(b.name) + '</text>'
+    + [0, 1, 2].map(i => '<rect x="' + (350 + i * 55) + '" y="35" width="40" height="8" rx="4" fill="#bbb"/>').join('') + '<rect x="540" y="26" width="70" height="28" rx="14" fill="' + b.c3 + '"/>'
+    + '<text x="40" y="125" font-size="28" font-weight="700" fill="' + b.c1 + '" font-family="' + esc(b.font) + '">' + tsp(wrap(b.tag, 20), 40, 34) + '</text><rect x="40" y="190" width="260" height="8" rx="4" fill="#ccc"/><rect x="40" y="206" width="200" height="8" rx="4" fill="#ccc"/><rect x="40" y="232" width="130" height="38" rx="19" fill="' + b.c1 + '"/><text x="105" y="256" text-anchor="middle" font-size="14" fill="' + ink(b.c1) + '" font-family="sans-serif">Get started</text>'
+    + '<rect x="360" y="90" width="240" height="180" rx="14" fill="' + b.c2 + '"/><circle cx="480" cy="180" r="42" fill="' + b.c3 + '"/>'
+    + [0, 1, 2].map(i => '<rect x="' + (40 + i * 190) + '" y="295" width="170" height="80" rx="10" fill="#fff" stroke="#0002"/><rect x="' + (40 + i * 190) + '" y="295" width="170" height="8" rx="4" fill="' + b.c1 + '"/><rect x="' + (54 + i * 190) + '" y="320" width="100" height="7" rx="3" fill="#ccc"/><rect x="' + (54 + i * 190) + '" y="338" width="70" height="7" rx="3" fill="#ddd"/>').join('')),
+  app: b => svg(640, 420, [70, 370].map((x, p) => '<rect x="' + x + '" y="10" width="200" height="400" rx="28" fill="#111"/><rect x="' + (x + 8) + '" y="20" width="184" height="380" rx="20" fill="' + b.c4 + '"/>'
+    + (p === 0 ? '<rect x="' + (x + 8) + '" y="20" width="184" height="56" rx="20" fill="' + b.c1 + '"/><text x="' + (x + 22) + '" y="54" font-size="15" font-weight="700" fill="' + ink(b.c1) + '" font-family="' + esc(b.font) + '">' + esc(b.name) + '</text>'
+      + [b.c2, b.c3, b.c1].map((c, i) => '<rect x="' + (x + 20) + '" y="' + (92 + i * 70) + '" width="160" height="56" rx="10" fill="#fff" stroke="#0002"/><rect x="' + (x + 20) + '" y="' + (92 + i * 70) + '" width="6" height="56" rx="3" fill="' + c + '"/><rect x="' + (x + 36) + '" y="' + (106 + i * 70) + '" width="90" height="7" rx="3" fill="#ccc"/><rect x="' + (x + 36) + '" y="' + (124 + i * 70) + '" width="60" height="7" rx="3" fill="#ddd"/>').join('')
+      + '<rect x="' + (x + 8) + '" y="350" width="184" height="50" rx="20" fill="#fff"/><circle cx="' + (x + 50) + '" cy="375" r="9" fill="' + b.c1 + '"/><circle cx="' + (x + 100) + '" cy="375" r="9" fill="#ccc"/><circle cx="' + (x + 150) + '" cy="375" r="9" fill="#ccc"/>'
+      : '<rect x="' + (x + 20) + '" y="40" width="160" height="120" rx="14" fill="' + b.c2 + '"/><circle cx="' + (x + 100) + '" cy="100" r="30" fill="' + b.c3 + '"/><text x="' + (x + 20) + '" y="200" font-size="18" font-weight="700" fill="' + b.c1 + '" font-family="' + esc(b.font) + '">' + tsp(wrap(b.tag, 16), x + 20, 22) + '</text><rect x="' + (x + 20) + '" y="260" width="140" height="7" rx="3" fill="#ccc"/><rect x="' + (x + 20) + '" y="276" width="100" height="7" rx="3" fill="#ddd"/><rect x="' + (x + 20) + '" y="340" width="160" height="40" rx="20" fill="' + b.c1 + '"/><text x="' + (x + 100) + '" y="365" text-anchor="middle" font-size="14" fill="' + ink(b.c1) + '" font-family="sans-serif">Continue</text>')).join('')),
+  map: b => { const ar = b.areas.split(',').map(s => s.trim()).filter(Boolean).slice(0, 9), n = ar.length || 1, cols = Math.ceil(Math.sqrt(n)), rows = Math.ceil(n / cols), cw_ = 580 / cols, ch = 300 / rows, cs = [b.c1, b.c2, b.c3], pts = [];
+    const cells = ar.map((a, i) => { const c = i % cols, r = Math.floor(i / cols), j = seed(b.name + a) % 14, x = 30 + c * cw_ + 6 + j / 2, y = 60 + r * ch + 6 + j / 3, w = cw_ - 12 - j, h = ch - 12 - j / 2; pts.push((x + w / 2) + ',' + (y + h / 2));
+      return '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" rx="14" fill="' + cs[i % 3] + '" fill-opacity=".35" stroke="' + b.c1 + '" stroke-width="1.5"/><text x="' + (x + w / 2) + '" y="' + (y + h / 2 + 5) + '" text-anchor="middle" font-size="14" font-weight="600" fill="#222" font-family="sans-serif">' + esc(a) + '</text>'; }).join('');
+    return svg(640, 400, '<rect width="640" height="400" fill="' + b.c4 + '"/><text x="30" y="36" font-size="18" font-weight="700" fill="' + b.c1 + '" font-family="' + esc(b.font) + '">Site map sketch: ' + esc(b.name) + '</text>' + cells + (pts.length > 1 ? '<polyline points="' + pts.join(' ') + '" fill="none" stroke="' + b.c3 + '" stroke-width="2" stroke-dasharray="6 5"/>' : '') + '<g transform="translate(600,26)"><path d="M0 -14 L8 8 L0 3 L-8 8 Z" fill="' + b.c1 + '"/><text y="24" text-anchor="middle" font-size="11" font-family="sans-serif">N</text></g><rect x="30" y="375" width="100" height="5" fill="' + b.c1 + '"/><text x="136" y="381" font-size="11" font-family="sans-serif" fill="#444">sketch, not to scale</text>'); }
+};
+let ptab = 'id', savedBrand = JSON.stringify(getBrand() || null);
+function setBrand(o) { for (const k in BF) if (o[k] != null) $(BF[k]).value = o[k]; if (o.mood) $('#bmood').value = o.mood; }
+function renderPrev() {
+  const b = curBrand(); $('#dprev').innerHTML = PV[ptab](b);
+  const r = ratio(b.c1, b.c4), saved = savedBrand === JSON.stringify(b);
+  $('#bstatus').textContent = (saved ? 'Saved baseline: Writer, Secretary and Coder helper follow it. ' : savedBrand === 'null' ? 'Not saved yet. Other agents have no baseline to follow. ' : 'Changes not saved yet. ') + 'Main colour on background: ' + r.toFixed(1) + ':1 ' + (r >= 4.5 ? '(readable).' : '(low contrast: text may be hard to read, try a darker main colour).');
+}
+const sb = getBrand(); if (sb) setBrand(sb);
+document.querySelectorAll('#designer input, #designer select').forEach(e => e.oninput = renderPrev);
+document.querySelectorAll('#dtabs button').forEach(b => b.addEventListener('click', () => { ptab = b.dataset.p; renderPrev(); }));
+$('#bsuggest').onclick = () => { const m = MOODS[$('#bmood').value]; setBrand({ c1:m[0], c2:m[1], c3:m[2], c4:m[3], font:m[4] }); renderPrev(); };
+$('#dsave').onclick = () => { const b = curBrand(); try { localStorage.setItem('nn_brand', JSON.stringify(b)); } catch (e) {} savedBrand = JSON.stringify(b); renderPrev(); say('Baseline "' + b.name + '" saved. From now on Writer, Secretary and the Coder helper keep to these colours, fonts and tone.'); };
+$('#ddl').onclick = () => { const s = $('#dprev svg'); if (!s) return; const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([s.outerHTML], { type:'image/svg+xml' })); a.download = (curBrand().name.replace(/\W+/g, '-') || 'design') + '-' + ptab + '.svg'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); };
+renderPrev();
+
+// Agents: add the two optional helpers to the library
+[['Coder helper', 'coder', 'Turns your app and website ideas into design questions and ready-to-paste prompts for your coding AI. Optional.', ['Ideas', 'Prompts', 'Design questions'], 'Optional module'], ['Designer', 'designer', 'Designs identities, layouts, social sets and site maps, then keeps every agent consistent with your baseline.', ['Brand', 'Website', 'App', 'Maps'], 'Available']].forEach(a => {
+  const d = document.createElement('div'); d.className = 'agent'; d.innerHTML = '<h3><i class="dot c-d"></i>' + a[0] + '</h3><p>' + a[2] + '</p><div>' + a[3].map(c => '<span class="mini">' + c + '</span>').join('') + '</div><p><small>' + a[4] + '</small></p><button class="primary">Open</button>';
+  d.querySelector('button').onclick = () => openModule(a[1]); $('#agentlist').append(d); });
+SUGG.coder = ['Turn my idea into a prompt', 'Suggest design questions']; SUGG.designer = ['Suggest colours for a calm brand', 'Check my contrast'];
+// Finances: bills (from the Secretary), manual entries and CSV statement import
+const FCUR = '\u20ac';
+let fzE = []; try { fzE = JSON.parse(localStorage.getItem('nn_fin')) || []; } catch (e) {}
+const fzSave = () => { try { localStorage.setItem('nn_fin', JSON.stringify(fzE)); } catch (e) {} };
+const fzGuess = t => { t = t.toLowerCase(); return /salary|wage|refund|payroll/.test(t) ? 'Income' : /rent|mortgage/.test(t) ? 'Housing' : /electric|water|gas|internet|energy|phone/.test(t) ? 'Utilities' : /super|market|grocer|restaurant|cafe|bakery/.test(t) ? 'Food' : /train|fuel|bus|taxi|parking|transit/.test(t) ? 'Transport' : /pharm|doctor|dent|clinic/.test(t) ? 'Health' : /insur/.test(t) ? 'Insurance' : /tax/.test(t) ? 'Taxes' : 'Other'; };
+const fzIso = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+const fzNum = s => { s = String(s).trim().replace(/[^\d,.\-]/g, ''); if (/,\d{1,2}$/.test(s)) s = s.replace(/\./g, '').replace(',', '.'); else s = s.replace(/,/g, ''); const v = parseFloat(s); return isNaN(v) ? null : v; };
+function fzInPeriod(iso) { const p = $('#fzper').value; if (p === 'all') return true; const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - +p); return iso.slice(0, 7) === fzIso(d).slice(0, 7); }
+function fzRender() {
+  const list = fzE.filter(e => fzInPeriod(e.d)).sort((a, b) => b.d.localeCompare(a.d));
+  const out = list.filter(e => e.kind === 'out').reduce((s, e) => s + e.v, 0), inn = list.filter(e => e.kind === 'in').reduce((s, e) => s + e.v, 0);
+  const open = bills.filter(b => !b.paid), openSum = open.reduce((s, b) => s + b.amount.v, 0), cur = open.length ? open[0].amount.cur : FCUR;
+  const kp = [['Spent', eur(out, FCUR)], ['Received', eur(inn, FCUR)], ['Balance', (inn - out < 0 ? '-' : '') + eur(Math.abs(inn - out), FCUR)], ['Open bills', eur(openSum, cur)]];
+  $('#fzkpi').innerHTML = kp.map(k => '<div class="panel" style="margin:0"><small style="color:var(--mute)">' + k[0] + '</small><div style="font-size:22px;font-weight:700">' + esc(k[1]) + '</div></div>').join('');
+  const bl = $('#fzbills'); bl.innerHTML = ''; $('#fzbnone').hidden = open.length > 0; $('#fzbsum').textContent = open.length ? open.length + ' open' : '';
+  open.slice().sort((a, b) => a.due - b.due).forEach(b => { const d = document.createElement('div'); d.className = 'row'; const late = b.due < new Date(new Date().toDateString());
+    d.textContent = b.from + ': ' + eur(b.amount.v, b.amount.cur) + ', due ' + fmtD(b.due) + (late ? ' (overdue)' : ''); if (late) d.style.color = '#a4282c'; bl.append(d); });
+  const cats = {}; list.filter(e => e.kind === 'out').forEach(e => cats[e.cat] = (cats[e.cat] || 0) + e.v);
+  const ce = Object.entries(cats).sort((a, b) => b[1] - a[1]); $('#fzcnone').hidden = ce.length > 0;
+  $('#fzcats').innerHTML = ce.map(([c, v]) => '<div style="display:flex;justify-content:space-between"><span>' + esc(c) + '</span><span>' + esc(eur(v, FCUR)) + '</span></div><div class="bar"><i style="width:' + Math.round(v / out * 100) + '%"></i></div>').join('');
+  const t = $('#fztab'); t.querySelectorAll('tr:not(:first-child)').forEach(r => r.remove()); $('#fznone').hidden = list.length > 0; $('#fzcount').textContent = list.length ? String(list.length) : '';
+  list.forEach(e => { const tr = t.insertRow(); [e.d, e.t, e.cat, (e.kind === 'in' ? '+' : '-') + eur(e.v, FCUR)].forEach(x => tr.insertCell().textContent = x);
+    const b = document.createElement('button'); b.textContent = 'Remove'; b.setAttribute('aria-label', 'Remove ' + e.t); b.onclick = () => { fzE = fzE.filter(x => x !== e); fzSave(); fzRender(); }; tr.insertCell().append(b); });
+}
+$('#fzper').onchange = fzRender;
+$('#fzdate').value = fzIso(new Date());
+$('#fzadd').onclick = () => { const t = $('#fzdesc').value.trim(), v = fzNum($('#fzamt').value), d = $('#fzdate').value, m = $('#fzmsg');
+  if (!t || v === null || v <= 0 || !d) { m.textContent = 'Please fill in what, a positive amount and a date.'; return; }
+  const kind = $('#fzkind').value; fzE.push({ d, t, v, kind, cat: kind === 'in' ? 'Income' : fzGuess(t) }); fzSave(); $('#fzdesc').value = ''; $('#fzamt').value = ''; m.textContent = 'Added.'; fzRender(); };
+let fzPend = [];
+function fzParse(txt) { return txt.split(/\r?\n/).map(l => l.trim()).filter(Boolean).map(l => { const p = (/[;\t]/.test(l) ? l.split(/[;\t]/) : l.split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/)).map(s => s.trim()); if (p.length < 3) return null; const dm = p[0].match(/^(\d{4})-(\d{2})-(\d{2})$/) || null; if (!dm) return null;
+  const v = fzNum(p[p.length - 1]); if (v === null || v === 0) return null; const t = p.slice(1, -1).join(' ').replace(/^"|"$/g, ''); return { d: p[0], t, v: Math.abs(v), kind: v < 0 ? 'out' : 'in', cat: v < 0 ? fzGuess(t) : 'Income' }; }).filter(Boolean); }
+$('#fzprev').onclick = () => { fzPend = fzParse($('#fzcsv').value); const box = $('#fzpreview');
+  if (!fzPend.length) { box.textContent = 'I could not read any lines. Use: date (YYYY-MM-DD), description, amount.'; return; }
+  const dup = fzPend.filter(n => fzE.some(e => e.d === n.d && e.t === n.t && e.v === n.v && e.kind === n.kind)).length;
+  box.innerHTML = ''; const p = document.createElement('p'); p.textContent = 'I found ' + fzPend.length + ' lines' + (dup ? ', ' + dup + ' already in your list (skipped)' : '') + '. Nothing is added until you confirm.'; const b = document.createElement('button'); b.className = 'primary'; b.textContent = 'Add ' + (fzPend.length - dup) + ' entries';
+  b.onclick = () => { const add = fzPend.filter(n => !fzE.some(e => e.d === n.d && e.t === n.t && e.v === n.v && e.kind === n.kind)); fzE.push(...add); fzSave(); box.textContent = 'Added ' + add.length + ' entries.'; $('#fzcsv').value = ''; fzPend = []; fzRender(); }; box.append(p, b); };
+$('#fzfile').onchange = e => { const f = e.target.files[0]; if (f) f.text().then(t => { $('#fzcsv').value = t; $('#fzprev').click(); }); };
+$('#fzsample').onclick = () => { const d = n => { const x = new Date(); x.setDate(x.getDate() - n); return fzIso(x); }; $('#fzcsv').value = [d(1) + ';Supermarket;-23,40', d(3) + ';Monthly salary;2450,00', d(4) + ';Train ticket;-18,90', d(6) + ';Pharmacy;-12,15', d(8) + ';Cafe;-6,80'].join('\n'); $('#fzprev').click(); };
+const goBase = go; go = function (id, ...a) { const r = goBase.call(this, id, ...a); if (id === 'finances') fzRender(); if (id === 'notes') ntRender(); return r; };
+SUGG.notes = ['What should I look into first?', 'Make this a reminder'];
+// Ideas: quick capture, sorting, clarifying questions, option comparison, reminder tasks
+let notes = []; try { notes = JSON.parse(localStorage.getItem('nn_notes')) || []; } catch (e) {}
+let ntSel = null, ntDel = null;
+const ntSave = () => { try { localStorage.setItem('nn_notes', JSON.stringify(notes)); } catch (e) {} };
+const NT_CLAR = [
+  [/12 ?v|circuit|wiring/i, 'Which part of your vehicle is this about?', ['Engine side', 'Car or starter battery', 'Leisure battery', 'Solar panel']],
+  [/fishing|fish(ing)? ?(line|wire|rod|gear|hook)/i, 'Which kind of fishing is it for?', ['Freshwater', 'Sea', 'Fly fishing', 'Carp']]
+];
+const NT_KB = [
+  [/ventilat|vent\b|fan\b/i, ['Electric (powered fan)', 'Passive (no power)', 'Manual (opening hatch)']],
+  [/rain ?water|water tank|storage tank/i, ['Above-ground tank', 'Underground tank', 'Collapsible tank', 'Gutter filter and first-flush diverter']],
+  [/fishing|line|wire/i, ['Braided line', 'Monofilament', 'Fluorocarbon']],
+  [/12 ?v|circuit|battery|solar/i, ['Wiring and fuse upgrade', 'Battery capacity', 'Charging source', 'Monitoring']]
+];
+function ntKind(t) {
+  if (/\b(app|website|web ?site|software|script|plugin|api|bot)\b/i.test(t)) return 'code';
+  if (/\b(screenwash|washer fluid|refill|top up|remember to|don'?t forget|call|renew|book|pay)\b/i.test(t)) return 'task';
+  if (NT_CLAR.some(r => r[0].test(t))) return 'clarify';
+  return 'compare';
+}
+function addNote(text) { const n = { id:String(Date.now()) + Math.random(), text:text.trim(), at:new Date().toLocaleDateString('en-GB', { day:'numeric', month:'short' }), topic:text.trim(), ans:'', done:false, buy:false, sent:false }; n.kind = ntKind(n.text); notes.unshift(n); ntSel = n.id; ntSave(); ntRender(); return n; }
+const NT_LABEL = { compare:'Compare options', clarify:'Needs a question', task:'Reminder task', code:'Coder helper' };
+const NT_WHY = { compare:'It sounds like something you want to buy or build, so I compare options.', clarify:'It could mean several things, so I ask before I search.', task:'It sounds like a small job you must not forget, so I make a reminder task.', code:'It mentions an app, website or software, so the Coder helper is the right place.' };
+function ntRender() {
+  $('#ntnone').hidden = notes.length > 0; $('#ntcount').textContent = notes.length ? String(notes.length) : '';
+  const l = $('#ntlist'); l.innerHTML = '';
+  notes.forEach(n => { const d = document.createElement('div'); d.className = 'idea'; if (n.id === ntSel) d.style.outline = '2px solid var(--brand)';
+    d.innerHTML = '<p></p><small style="color:var(--mute)">' + esc(n.at) + ' \u00b7 ' + esc(NT_LABEL[n.kind]) + (n.done ? ' \u00b7 done' : '') + '</small><div></div>'; d.querySelector('p').textContent = n.text;
+    const o = document.createElement('button'); o.className = 'primary'; o.textContent = 'Open'; o.onclick = () => { ntSel = n.id; ntRender(); };
+    const x = document.createElement('button'); x.textContent = ntDel === n.id ? 'Sure? Delete' : 'Delete'; x.onclick = () => { if (ntDel === n.id) { notes = notes.filter(k => k !== n); ntDel = null; if (ntSel === n.id) ntSel = null; ntSave(); } else ntDel = n.id; ntRender(); };
+    d.lastChild.append(o, x); l.append(d); });
+  document.querySelectorAll('#agtable .ntrow').forEach(r => r.remove());
+  notes.filter(n => n.kind === 'task' && !n.done).forEach(n => { const tr = $('#agtable').insertRow(); tr.className = 'ntrow'; ['Every day 09:00 until done', 'Scheduler', n.text, 'Personal reminder', '-'].forEach(v => tr.insertCell().textContent = v); });
+  ntDetail();
+}
+function ntDetail() {
+  const w = $('#ntwork'), n = notes.find(k => k.id === ntSel); w.innerHTML = '';
+  if (!n) { w.innerHTML = '<h3>Work area</h3><small style="color:var(--mute)">Pick an idea to see what I made of it.</small>'; return; }
+  const h = document.createElement('h3'); h.textContent = n.text; w.append(h);
+  const why = document.createElement('p'); why.innerHTML = '<span class="tag fact">How I read this</span> '; why.append(NT_WHY[n.kind] + ' '); const sel = document.createElement('select'); sel.className = 'inp'; sel.style.cssText = 'width:auto;margin-left:6px'; sel.setAttribute('aria-label', 'Change how I sort this idea');
+  Object.keys(NT_LABEL).forEach(k => { const o = document.createElement('option'); o.value = k; o.textContent = NT_LABEL[k]; if (k === n.kind) o.selected = true; sel.append(o); });
+  sel.onchange = () => { n.kind = sel.value; ntSave(); ntRender(); }; why.append(sel); w.append(why);
+  if (n.kind === 'clarify') {
+    const r = NT_CLAR.find(c => c[0].test(n.text)) || NT_CLAR[0], q = document.createElement('p'); q.textContent = r[1]; w.append(q);
+    const g = document.createElement('div'), pick = a => { n.ans = a; n.topic = n.text + ' (' + a + ')'; n.kind = 'compare'; ntSave(); ntRender(); };
+    r[2].forEach(a => { const b = document.createElement('button'); b.textContent = a; b.onclick = () => pick(a); g.append(b); });
+    const f = document.createElement('form'); f.style.cssText = 'display:flex;gap:6px;margin-top:8px'; f.innerHTML = '<input class="inp" aria-label="Your own answer" placeholder="Or type your own answer"><button>Use</button>'; f.onsubmit = e => { e.preventDefault(); const v = f.querySelector('input').value.trim(); if (v) pick(v); }; w.append(g, f);
+  } else if (n.kind === 'compare') {
+    const opts = (NT_KB.find(k => k[0].test(n.topic)) || [0, ['Buy ready-made', 'Build or fit it yourself', 'Hire someone']])[1];
+    const o = document.createElement('p'); o.innerHTML = '<b>Option families I would look at:</b> ' + opts.map(x => '<span class="mini">' + esc(x) + '</span>').join(' '); w.append(o);
+    const tiers = [['Best quality', 'Top reviews, longest warranty and durability. Price comes second.'], ['Best budget', 'Lowest price that still does the job. I flag what is cut.'], ['Best do-it-yourself', 'Parts list, tools, steps and difficulty so you can fit or build it yourself.'], ['Best middle choice', 'Best value: close to top quality at a sensible price.']];
+    const gr = document.createElement('div'); gr.className = 'grid'; tiers.forEach(t => { const c = document.createElement('div'); c.className = 'panel'; c.style.margin = '0'; c.innerHTML = '<b>' + t[0] + '</b><p style="margin:4px 0"></p><small style="color:var(--mute)">Search plan: </small><code></code>'; c.querySelector('p').textContent = t[1]; c.querySelector('code').textContent = n.topic + ' ' + t[0].toLowerCase(); gr.append(c); }); w.append(gr);
+    const lb = document.createElement('label'); lb.className = 'inl'; lb.style.marginTop = '10px'; const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = n.buy; cb.onchange = () => { n.buy = cb.checked; ntSave(); ntDetail(); }; lb.append(cb, ' Also show where to buy or order'); w.append(lb);
+    const run = document.createElement('p'); const b = document.createElement('button'); b.className = 'primary'; b.textContent = 'Start the search'; b.onclick = () => say('Prototype note: in the real app I would now search the web for "' + n.topic + '", compare sources, and report the four picks with links, prices' + (n.buy ? ', and shops where you can buy or order' : '') + '. Searching only reads; buying or ordering always asks your approval. My reasoning goes in the Why log.'); run.append(b); w.append(run);
+    const s = document.createElement('small'); s.style.color = 'var(--mute)'; s.textContent = 'Prototype: this shows the plan I would follow. The real app searches, cites its sources and shows why each pick was chosen.'; w.append(s);
+  } else if (n.kind === 'task') {
+    const p = document.createElement('p'); p.textContent = n.done ? 'Done. Reminders stopped.' : 'I added this to your Agenda. I remind you every day at 09:00 until you mark it done.'; w.append(p);
+    if (!n.done) { const b = document.createElement('button'); b.className = 'primary'; b.textContent = 'Mark as done'; b.onclick = () => { n.done = true; ntSave(); ntRender(); }; w.append(b); }
+    const lb = document.createElement('label'); lb.className = 'inl'; lb.style.marginTop = '10px'; const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = n.buy; cb.onchange = () => { n.buy = cb.checked; ntSave(); ntDetail(); }; lb.append(cb, ' Also show where to buy or order'); w.append(lb);
+    if (n.buy) { const s = document.createElement('p'); s.textContent = 'In the real app I would list nearby shops and online sellers with prices. I never order for you without approval.'; w.append(s); }
+  } else if (n.kind === 'code') {
+    const p = document.createElement('p'); p.textContent = n.sent ? 'Sent to the Coder helper.' : 'This looks like something to build. The Coder helper can ask design questions and write the prompt for your coding AI.'; w.append(p);
+    if (!n.sent) { const b = document.createElement('button'); b.className = 'primary'; b.textContent = 'Send to Coder helper'; b.onclick = () => { addIdea(n.text); n.sent = true; ntSave(); openModule('coder'); }; w.append(b); }
+  }
+}
+$('#ntform').onsubmit = e => { e.preventDefault(); const v = $('#ntin').value.trim(); if (v) { addNote(v); $('#ntin').value = ''; } };
+ntRender();SUGG.finances = SUGG.finances || ['What do I still have to pay?', 'Where does my money go?'];
+renderNav();
+applyLay(); go('overview');
+</script>
+</body>
+</html>

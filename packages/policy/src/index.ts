@@ -1,20 +1,19 @@
-// Policy engine: risk tiers and deterministic allow/ask/deny decisions.
-export type RiskTier = 0 | 1 | 2 | 3;
-export type Decision = 'allow' | 'ask' | 'deny';
+// Policy engine: risk tiers, rule evaluation, budgets, kill switch
+export type { RiskTier, Decision, PolicyDecision } from './types.js';
+export type { ToolManifestEntry, PolicyRule, UntrustedInputState, BudgetScope, Budget, BudgetState, KillSwitchState, PolicyContext, PolicyEvent } from './types.js';
 
-export interface ToolManifestEntry {
-  id: string;
-  tier: RiskTier;
-}
+// Core decision engine
+export { decide } from './engine.js';
+export { policyEngine, SimplePolicyEngine, classify, evaluateRules, applyHardRules, checkUntrustedInput, explainDecision } from './engine.js';
 
-/** Unknown tools are treated as the strictest tier. */
-export function classify(toolId: string, manifest: readonly ToolManifestEntry[]): RiskTier {
-  return manifest.find((t) => t.id === toolId)?.tier ?? 3;
-}
+// Budget service
+export { checkBudget, checkAllBudgets, aggregateBudgetResults, createBudgetState, getPeriodLabel } from './budget.js';
 
-/** Tier 3 can never be automatic; tier 2 follows the assistant's setting. */
-export function decide(tier: RiskTier, tier2Setting: 'allow' | 'ask'): Decision {
-  if (tier === 3) return 'ask';
-  if (tier === 2) return tier2Setting;
-  return 'allow';
-}
+// Kill switch
+export { checkKillSwitch, shouldPauseForImportantTask, getImportantTaskBehavior, createKillSwitch, activateKillSwitch, deactivateKillSwitch, formatKillSwitchReason, getEscalationPath } from './killswitch.js';
+
+// Untrusted input handling
+export { markAsUntrusted, isUntrusted, shouldTaintAction, getUntrustedInputRecommendation, stripInstructionsFromUntrusted, createUntrustedEventMetadata } from './untrusted.js';
+
+// Currency support
+export { convertCurrency, formatCurrency, showWithEstimated, estimateUserCost, createCurrencyContext, DEFAULT_RISK_TIER_COSTS, getCostEstimate, calculateTotalCost, ExchangeRateService, SimpleExchangeRateService } from './currency.js';

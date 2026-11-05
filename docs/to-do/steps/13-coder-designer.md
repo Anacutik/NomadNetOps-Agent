@@ -19,7 +19,7 @@ You are working on NomadNetOps. Do step 13 (Coder helper and Designer) and nothi
 ## Coder helper
 1. Idea intake from the Ideas module and directly.
 2. Analyse the idea, ask up to 7 design questions (each skippable), use the Designer baseline.
-3. Write the prompt for Kilo Code, Copilot Chat or any coding AI, with safety rules (small steps, git branch, tests, no destructive commands, no secrets).
+3. Write the prompt for Kilo Code, Copilot Chat or any coding AI, with safety rules (small steps, git branch, tests, no destructive commands, no secrets) and include the repository model policy: `qwen/qwen3-coder-next` by default, `qwen/qwen3-coder-30b-a3b-instruct` only for low-risk helper work, `qwen/qwen3-coder-flash` only for genuinely large-context/latency needs, and `qwen/qwen3-coder` 480B only after explicit escalation approval.
 4. Optional vetted connector to open VS Code and paste the prompt; never edit code directly.
 5. Prompt library and versions; learn from which prompts the user keeps.
 

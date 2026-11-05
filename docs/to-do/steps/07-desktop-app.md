@@ -25,7 +25,7 @@ Three-column layout, adjustable overview widgets, sidebar and module settings, M
 3. Port views: Overview widgets, Agents, Agenda, Activity, Why log, Tools, Settings (Master AI, models, library, tasks, menu and modules).
 4. Builder boxes with user-adjustable layout; locked Approval box.
 5. Master AI layout and menu intents with Undo.
-6. Model library UI: 600+ models, details and prices, favourites to the top, filters.
+6. Model library UI: live OpenRouter catalogue, details and current prices, favourites to the top, filters; never display a hard-coded model count.
 7. Responsive layout shared with the phone web view (see step 08).
 8. Usability tests with non-coders; fix the top 10 issues.
 

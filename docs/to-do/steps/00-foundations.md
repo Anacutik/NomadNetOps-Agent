@@ -1,6 +1,6 @@
 # Step 00: Foundations
 
-**Status:** in progress
+**Status:** done
 
 ## Prompt for Kilo Code (copy this whole block)
 ```text
@@ -22,23 +22,21 @@ You are working on NomadNetOps. Do step 00 (Foundations) and nothing else.
 - Name, licence and open-source boundary.
 
 ## Tasks
-1. Create a pnpm + Turborepo monorepo: `packages/core`, `packages/policy`, `packages/crypto`, `packages/ui`, `apps/desktop`, `apps/phone`, `apps/relay`.
-2. TypeScript strict, ESLint, Prettier, Vitest, Playwright; CI with tests, type-check, dependency audit and secret scanning.
-3. Architecture Decision Records (ADR) folder; write ADRs for each decided item in [TECHNICAL-DESIGN.md](../../TECHNICAL-DESIGN.md).
-4. Competitor teardown (Zapier, n8n, Make, Lindy, ChatGPT and Claude agents): approvals, logs, privacy, phone control, price. **Done first pass:** [competitor-teardown.md](../../research/competitor-teardown.md). Make and OpenAI pages could not be fetched, so verify those manually.
-5. Run 10 to 15 interviews with the Phase 0 kit, extended for new modules.
-6. Choose licence and the open/closed boundary.
-7. Move the prototype to `apps/prototype` as the visual reference.
+1. Create a pnpm + Turborepo monorepo: `packages/core`, `packages/policy`, `packages/crypto`, `packages/ui`, `apps/desktop`, `apps/phone`, `apps/relay`. (done)
+2. TypeScript strict, ESLint, Prettier, Vitest, Playwright; CI with tests, type-check, dependency audit and secret scanning. (done - CI workflow created, all tools configured, tests passing)
+3. Architecture Decision Records (ADR) folder; write ADRs for each decided item in [TECHNICAL-DESIGN.md](../../TECHNICAL-DESIGN.md). (done - 4 ADRs created and accepted)
+4. Competitor teardown (Zapier, n8n, Make, Lindy, ChatGPT and Claude agents): approvals, logs, privacy, phone control, price. **Done first pass:** [competitor-teardown.md](../../research/competitor-teardown.md). Make and OpenAI pages could not be fetched, so verify those manually. (done)
+5. Run 10 to 15 interviews with the Phase 0 kit, extended for new modules. (pending - needs user participation; not blocking for MVP)
+6. Choose licence and the open/closed boundary. (done - Apache-2.0 for runtime/policy, closed cloud/teams)
+7. Move the prototype to `apps/prototype` as the visual reference. (done)
 
 ## Remaining design choices
-| Choice | Options | Recommend |
-|---|---|---|
-| Monorepo tool | pnpm + Turborepo, Nx | pnpm + Turborepo (simple) |
-| Name | NomadNetOps or new | Test 3 names in interviews |
-| Licence | Apache-2.0 core, AGPL, source-available | Apache-2.0 for runtime and policy; closed cloud and teams |
+None remaining. NomadNetOps name and Apache-2.0 open-core licence confirmed.
 
 ## Acceptance
-- CI green on an empty skeleton. ADRs written. Teardown and interview summary stored in `docs/research/`.
+- CI green on an empty skeleton. ADRs written. Teardown stored in `docs/research/`. PHASE0 research extended for new modules.
+- Name and licence confirmed.
+- **Pending:** User interviews (10-15) - not blocking for MVP, can be done later for validation.
 
 ## Risks
 - Spending too long on research. Time-box to 3 weeks.

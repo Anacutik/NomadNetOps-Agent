@@ -17,19 +17,20 @@ You are working on NomadNetOps. Do step 04 (Model gateway, keys, Auto picks) and
 **Goal:** talk to many models safely, with per-task settings, per-task keys, cost accounting and a curated Auto mode.
 
 ## Scope
-Provider adapters (OpenRouter first), BYOK, model catalogue, favourites, filters, per-task and per-model settings with inheritance, Auto picks proposed by the Master AI.
+Provider adapters (OpenRouter first), BYOK, model catalogue, favourites, filters, per-task and per-model settings with inheritance, Auto picks proposed by the Master AI. Default coding model: `qwen/qwen3-coder-next`; cheap helper: `qwen/qwen3-coder-30b-a3b-instruct`; large-context option: `qwen/qwen3-coder-flash`; explicit escalation/reviewer: `qwen/qwen3-coder` (480B A35B).
 
 ## Tasks
 1. Adapter interface; OpenRouter adapter; Ollama adapter; one direct provider adapter.
 2. Streaming, retries, timeouts, fallbacks.
 3. Cost accounting on every response, written to `model.responded`.
-4. Catalogue sync daily when OpenRouter is the provider; cache; price and capability fields.
+4. Catalogue sync daily when OpenRouter is the provider; cache live price and capability fields; do not hard-code catalogue counts or prices.
 5. Favourites, filters (price, task fit, context, `:batch`, `:free` with drawbacks).
 6. Settings inheritance: global default, task type, task, per-model; reasoning levels.
 7. Per-task API keys via the vault; set provider-side limits where supported.
 8. Auto: curated picks per task type; Master AI proposes changes with reasons; user approves; log changes.
 9. Data minimisation and a "what will be sent to which provider" preview.
-10. Provider-failure handling that never silently changes a model without logging it.
+10. Provider-failure handling that never silently changes a model without user-visible notice and a `model.responded` record.
+11. Model policy and budget guardrails: standard variants by default, no free variants for private data, explicit approval for escalation/fallback, provider key hard limit, Nomad global cap, per-run cap, 80% warning and hard stop/pause.
 
 ## Remaining design choices
 | Choice | Options | Recommend |

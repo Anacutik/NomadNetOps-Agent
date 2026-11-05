@@ -46,9 +46,9 @@ Size: S under 2 weeks, M 2 to 4, L 4 to 8, XL 8 or more (one small team).
 
 | Topic | Options | Recommend | Decide at |
 |---|---|---|---|
-| Product name and brand | Keep NomadNetOps, or rename | Test with users in step 00 | 00 |
+| Product name and brand | Keep NomadNetOps, or rename | N/A - already decided: NomadNetOps | 00 (done) |
 | Pricing | Free tier + subscription, usage-based, one-time desktop licence | Free local use with BYO keys, paid for cloud Core, sync and teams | 15 |
-| Open-source scope | Open-core, fully open | Open runtime, policy engine, relay and connectors; closed cloud and teams features | 00 |
+| Open-source scope | Open-core, fully open | N/A - already decided: Apache-2.0 for runtime/policy, closed cloud/teams | 00 (done) |
 | Languages | English first, then Dutch and others | i18n from day one, English and Dutch first | 07 |
 | Document retention | User-defined, default 7 years for bills and letters, 1 year for others | Per-type default, always user-editable | 10 |
 | Official-letter analysis | Generic, per-country packs | Generic first, then country packs (NL, then EU) | 10 |

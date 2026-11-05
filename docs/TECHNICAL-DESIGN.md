@@ -191,11 +191,13 @@ A cloud Core needs to read data to work, so it receives a **scoped, revocable se
 
 ## 8. Model gateway
 
-- Provider adapters: OpenRouter first (600+ models, per-key limits), then direct providers and local models (Ollama).
+- Provider adapters: OpenRouter first (live catalogue, per-key limits), then direct providers and local models (Ollama).
+- Coding model policy: `qwen/qwen3-coder-next` is the default implementation model; `qwen/qwen3-coder-30b-a3b-instruct` is for low-risk helper work; `qwen/qwen3-coder-flash` is reserved for genuinely large-context or latency-sensitive work; `qwen/qwen3-coder` (480B A35B) is an explicit escalation/reviewer model. No fallback or escalation is silent.
 - Model catalogue refreshed daily when OpenRouter is the provider; favourites shown first; filters for price and task fit; `:free` and `:batch` flagged with drawbacks. (Decided)
 - Per-task and per-model settings, reasoning levels, and per-task keys inherit from defaults. (Decided)
 - **Auto** uses curated picks. The **Master AI proposes** them; the user approves each change; each change is logged with a reason. (Decided)
 - Cost accounting on every response (tokens, price at that moment, model version) written into `model.responded`.
+- Runtime defaults include a `$10/month` provider-key hard limit, `$5/month` Nomad development cap and `$0.50-$1.00` per-run cap, all adjustable by the user. Warn at 80%; stop or pause at the hard limit. The runtime must enforce these limits independently of model instructions.
 - Data minimisation: strip fields the task does not need before sending.
 
 ## 9. Agent runtime

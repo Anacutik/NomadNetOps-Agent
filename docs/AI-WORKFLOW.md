@@ -15,8 +15,22 @@ Every AI assistant (Kilo Code, Copilot, Claude, anything else) that works on thi
 - No secrets, keys or real user data in the repository, tests or logs.
 - Do not change decisions in the plan silently. If you disagree with one, ask the user.
 
+## Coding model policy (OpenRouter)
+
+Use this policy unless the user explicitly selects another approved model:
+
+- **Default implementation model:** `qwen/qwen3-coder-next` (OpenRouter provider ID: `openrouter/qwen/qwen3-coder-next`). It is the normal model for repository changes, tests, refactors and agentic tool use.
+- **Cheap helper:** `qwen/qwen3-coder-30b-a3b-instruct` for orientation, summaries, changelog drafts, documentation and straightforward low-risk boilerplate. It is not the sole reviewer for crypto, policy, authentication, data isolation or release work.
+- **Large-context/fast option:** `qwen/qwen3-coder-flash` only when its 1M context or latency is genuinely needed. Its input/output price increases at larger prompt sizes, so it is not the default cheap model.
+- **Escalation/reviewer:** `qwen/qwen3-coder` (480B A35B) for difficult architecture, security-sensitive changes, failed reviews and final checks. Escalation requires an explicit user-approved model change; it must never happen silently.
+- Use standard variants for correctness-sensitive work. Do not use `:free` for private repository content or security-sensitive work, and do not silently substitute `:batch`, `:floor`, `:nitro`, `:exacto`, aliases or another model.
+- Prices, availability and capabilities are live OpenRouter data. Show the current price before a run and record the actual provider, model, token usage and charged cost in `model.responded`.
+- Runtime budgets are authoritative: use a provider key hard limit of `$10/month`, a Nomad development cap of `$5/month`, and a per-run cap of `$0.50-$1.00` as adjustable defaults. Warn at 80% and stop or pause at the hard limit.
+- Limit context, output tokens, retries and agent steps. Do not send the whole repository when targeted context is sufficient. Do not send private data to a provider without an explicit data-flow confirmation.
+
 ## While you build
 - Small, surgical changes. Follow existing code style. Add tests for new behaviour.
+- Do not commit, reset, checkout, stash, delete unrelated work, weaken tests, or silently add dependencies. Ask before installing a new dependency or making a destructive/schema migration change.
 - Before finishing, `pnpm lint`, `pnpm typecheck`, `pnpm test` and `pnpm build` must all pass. Do not skip or weaken tests to make them pass.
 - Do not commit unless the user asks.
 

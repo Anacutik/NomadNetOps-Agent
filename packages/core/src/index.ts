@@ -1,2 +1,7 @@
-// Core abstractions: events, spaces, runs and the assistant file.
-export const CORE_VERSION = '0.0.0';
+// Step 01: Event log and data layer exports
+export { EventSchema, EventLogHeaderSchema, ExportedEventLogSchema, type Event, type EventLogHeader, type ExportedEventLog, computeEventHash, hashString, verifyEventHash, verifyChain } from './eventSchema.js';
+export { EventLogWriter, FileEventLogWriter, MemoryEventLogWriter, type FileEventLogWriterOptions, type MemoryEventLogWriterOptions } from './eventLogWriter.js';
+export { EventLogVerifier, type VerificationResult, type VerificationError, verifyEventLog } from './eventLogVerification.js';
+export { SCHEMA_VERSION, CREATE_EVENTS_TABLE, CREATE_EVENT_INDEXES, CREATE_EVENT_LOG_METADATA_TABLE, CREATE_SOURCES_TABLE, CREATE_RUNS_TABLE, CREATE_RUNS_INDEXES, CREATE_BACKUPS_TABLE, CREATE_BACKUPS_INDEXES, GET_METADATA, INSERT_METADATA, INSERT_EVENT, BATCH_INSERT_EVENTS, GET_EVENTS_BY_RANGE, GET_LATEST_EVENTS, GET_EVENT_BY_ID, GET_EVENTS_BY_SOURCE, GET_EVENTS_BY_TYPE, COUNT_EVENTS, GET_HEAD_EVENT, GET_HEAD_HASH, DELETE_EVENT, CLEAR_EVENTS, INSERT_SOURCE, GET_SOURCES, GET_SOURCE_BY_ID, INSERT_RUN, UPDATE_RUN, GET_RUNS_BY_SOURCE, GET_RUN_BY_ID, INSERT_BACKUP, GET_BACKUPS, GET_BACKUP_BY_ID, DELETE_OLD_BACKUPS } from './sqliteSchema.js';
+export { EventRepository, InMemoryEventRepository, type Source, InMemorySourceRepository, type Run, InMemoryRunRepository } from './repository.js';
+export { exportEvents, importEvents, createHeader, countEventsInFile, extractEvents, mergeEventFiles, createSnapshot, type ExportOptions, type ImportOptions } from './exportTools.js';

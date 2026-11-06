@@ -58,7 +58,7 @@ export function decide(context: PolicyContext): PolicyDecision {
 
   const effectiveTier = classifiedTier;
 
-  const baseDecision = getBaseDecision(effectiveTier, context);
+  const baseDecision = getBaseDecision(effectiveTier);
   const hardRuleDecision = applyHardRules(effectiveTier, baseDecision);
 
   const ruleId = ruleMatch?.ruleId || (untrustedInput?.isTainted ? 'untrusted-input' : 'default-classification');
@@ -72,7 +72,7 @@ export function decide(context: PolicyContext): PolicyDecision {
   };
 }
 
-function getBaseDecision(tier: RiskTier, _context: PolicyContext): Decision {
+function getBaseDecision(tier: RiskTier): Decision {
   if (tier === 3) return 'ask';
   if (tier === 2) return 'ask';
   return 'allow';
@@ -144,7 +144,7 @@ export class SimplePolicyEngine implements PolicyEngine {
 
     const effectiveTier = this.getClassifyTool('unknown.action', toolManifest);
 
-    const baseDecision = this.getBaseDecision(effectiveTier, context);
+    const baseDecision = this.getBaseDecision(effectiveTier);
     const decision = this.applyHardRules(effectiveTier, baseDecision);
 
     const ruleId = untrustedInput?.isTainted ? 'untrusted-input' : 'default-classification';
@@ -203,7 +203,7 @@ export class SimplePolicyEngine implements PolicyEngine {
     return entry ? entry.tier : 3;
   }
 
-  private getBaseDecision(tier: RiskTier, _context: PolicyContext): Decision {
+  private getBaseDecision(tier: RiskTier): Decision {
     if (tier === 3) return 'ask';
     if (tier === 2) return 'ask';
     return 'allow';

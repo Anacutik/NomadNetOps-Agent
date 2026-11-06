@@ -23,22 +23,23 @@ Step 03 continues the work from Step 02. The policy engine is implemented but ha
 - Added `BudgetCheckResult` type to `types.ts` for proper typing in `checkBudgets`
 - Fixed `explain` function reference in `SimplePolicyEngine.explain`
 - Removed redundant import in `redteam.test.ts`
+- Follow-up lint pass (2026-11-05): removed remaining unused imports/vars in core (`eventLogVerification.ts`, `eventLogWriter.ts`, `exportTools.ts`) and policy (`engine.ts` unused `_context` params, `redteam.test.ts` import); added `{ cause }` to a re-thrown error in `exportTools.ts`; added `.kilo/**` to ESLint ignores (stale worktree directory broke tsconfigRootDir detection)
 
 ## Finalization (2026-11-05)
 - Fixed remaining lint errors so `pnpm lint` passes repo-wide: removed unused import in `redteam.test.ts`, unused `_context` params covered by a new `argsIgnorePattern: "^_"` rule in `eslint.config.mjs`, and pre-existing unused imports/vars in `packages/core` (`eventLogVerification.ts`, `eventLogWriter.ts`, `exportTools.ts`), plus added `cause` to the JSON parse error in `exportTools.ts`.
 
 ## Verification
-- Tests: 49/49 passed
+- Tests: 49/49 passed (policy package), all package tests pass
 - Build: Passed (`pnpm run build`)
 - Typecheck: Passed (`pnpm run typecheck`)
-- Lint: Passed repo-wide (`pnpm lint`), including previously pre-existing core package errors (fixed 2026-11-05)
+- Lint: Passed (`pnpm run lint`, exit 0) after follow-up fixes above
 
 ## Left over / follow-ups
 - None for policy package
 
 ## Docs updated
 - [x] Step file (Status updated to done)
-- [x] docs/STATUS.md (Step 03 marked done with update date)
+- [x] docs/STATUS.md (Step 03 marked done)
 - [ ] PLAN.md (no change needed)
 - [ ] docs/to-do/extensive-plan.md (no change needed)
 

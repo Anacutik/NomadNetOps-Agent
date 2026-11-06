@@ -8,9 +8,11 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run"
   },
   "dependencies": {
+    "@scure/bip39": "^2.4.0",
+    "libsodium-wrappers-sumo": "^0.8.4",
     "zod": "^4.6.7"
   }
 }

@@ -6,8 +6,8 @@ Single place to see where the build stands. Updated by every AI or person who fi
 |---|---|---|---|---|
 | 00 | Foundations | done | 2026-11-04 | Monorepo, ADRs, ESLint, CI file, competitor teardown, PHASE0 research extended, name (NomadNetOps) and licence (Apache-2.0 open-core) confirmed. |
 | 01 | Event log and data layer | done | 2026-11-04 | Zod schemas, FileEventLogWriter, MemoryEventLogWriter, EventLogVerifier, SQLite schema, InMemory repositories, export/import tools. Tests pass. |
-| 02 | Security: keys, 2FA, recovery | not started | | |
-| 03 | Policy engine, budgets | in progress | 2026-11-04 | Lint errors fixed (unused imports/vars, explicit any types), removed duplicate policyEngine.ts file, added BudgetCheckResult type to types.ts. Tests pass (49/49), build passes. |
+| 02 | Security: keys, 2FA, recovery | done | 2026-11-05 | packages/crypto on libsodium: key hierarchy, spaces with per-device sealed keys and rotation, Argon2id password wrap, BIP-39 recovery phrase, TOTP/backup codes/passkey seam, recovery waiting period, QR device pairing, encrypted vault, field-level encryption + SQLCipher contract, crypto deletion. 115 tests incl. RFC 6238 and BIP-39 vectors. |
+| 03 | Policy engine, budgets | done | 2026-11-05 | Policy engine, budgets, kill switch, untrusted-input taint, red-team tests (49/49). Follow-up lint fixes in core/policy and ESLint ignores. Lint/typecheck/test/build all pass. |
 | 04 | Model gateway | not started | | |
 | 05 | Agent runtime | not started | | |
 | 06 | Connectors and vetting | not started | | |
@@ -23,4 +23,5 @@ Single place to see where the build stands. Updated by every AI or person who fi
 | 16 | Compliance and launch | not started | | |
 
 ## Next up
-- Step 02 (Security: keys, 2FA, recovery)
+- Step 04 (Model gateway, keys, Auto picks) — dependencies 02 and 03 are done.
+- After that: Step 05 (Agent runtime and assistant file), which unlocks 07 (Desktop app).

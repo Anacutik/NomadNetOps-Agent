@@ -1,5 +1,5 @@
-import { EventSchema, ExportedEventLogSchema, type Event, type EventLogHeader } from './eventSchema.js';
-import { verifyEventLog, type VerificationResult } from './eventLogVerification.js';
+import { type Event, type EventLogHeader } from './eventSchema.js';
+import { verifyEventLog } from './eventLogVerification.js';
 
 export interface ExportOptions {
   includeHeader?: boolean;
@@ -15,7 +15,7 @@ export async function exportEvents(
   events: Event[],
   options: ExportOptions = {}
 ): Promise<string> {
-  const { includeHeader = true, format = 'json', compress = false } = options;
+  const { includeHeader = true, format = 'json' } = options;
 
   if (events.length === 0) {
     return format === 'ndjson' ? '' : JSON.stringify({ header: createHeader(events), events: [] }, null, 2);
@@ -42,7 +42,7 @@ export async function importEvents(
   try {
     parsed = JSON.parse(data);
   } catch (e) {
-    throw new Error(`Invalid JSON: ${(e as Error).message}`);
+    throw new Error(`Invalid JSON: ${(e as Error).message}`, { cause: e });
   }
 
   let events: Event[];

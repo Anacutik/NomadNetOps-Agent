@@ -1,4 +1,4 @@
-import { EventSchema, ExportedEventLogSchema, computeEventHash, type Event, type EventLogHeader } from './eventSchema.js';
+import { EventSchema, ExportedEventLogSchema, computeEventHash, type Event } from './eventSchema.js';
 
 export interface VerificationResult {
   valid: boolean;
@@ -30,7 +30,6 @@ export class EventLogVerifier {
 
     for (let i = 0; i < events.length; i++) {
       const event = events[i];
-      const index = i;
 
       if (seenIds.has(event.id)) {
         errors.push({

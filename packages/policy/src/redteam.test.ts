@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { policyEngine } from './engine.js';
 import { checkBudget, aggregateBudgetResults } from './budget.js';
 import { checkKillSwitch, getEscalationPath } from './killswitch.js';
-import { markAsUntrusted, isUntrusted, stripInstructionsFromUntrusted } from './untrusted.js';
+import { isUntrusted, stripInstructionsFromUntrusted } from './untrusted.js';
 import { convertCurrency, formatCurrency, SimpleExchangeRateService, DEFAULT_RISK_TIER_COSTS } from './currency.js';
 
 describe('red-team tests', () => {

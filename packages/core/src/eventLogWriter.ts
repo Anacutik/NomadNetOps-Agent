@@ -1,4 +1,4 @@
-import { EventSchema, EventLogHeaderSchema, computeEventHash, type Event, type EventLogHeader } from './eventSchema.js';
+import { EventSchema, computeEventHash, type Event, type EventLogHeader } from './eventSchema.js';
 
 export interface EventLogWriter {
   append(event: Event): Promise<void>;
@@ -99,7 +99,6 @@ export class FileEventLogWriter implements EventLogWriter {
   }
 
   async #save(): Promise<void> {
-    const data = await this.export();
     throw new Error('File write not supported in browser environment');
   }
 }
